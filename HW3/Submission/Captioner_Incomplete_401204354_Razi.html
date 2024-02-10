@@ -1,0 +1,1386 @@
+<section id="introduction" class="cell markdown" id="TGB0s6DlenuF">
+<h1>Introduction</h1>
+<ol>
+<li><p><strong>Translation Model</strong>: In this homework assignment,
+the initial focus is on implementing a Translation Model. This component
+aims to facilitate language translation, using the Seamless
+model.</p></li>
+<li><p><strong>ClipCap Model</strong>: The second major section involves
+the creation of a Captioner model utilizing CLIP. This model is designed
+to generate captions, in response to visual input.</p></li>
+<li><p><strong>ClipCap + Translation</strong>: The final part of the
+notebook combines the capabilities of the ClipCap model with the
+Translation Model. This integration suggests a comprehensive solution
+where CLIP-generated captions are subsequently translated into Farsi
+using the Seamless model.</p></li>
+</ol>
+</section>
+<section id="imports" class="cell markdown" id="TG9N24vRgdG_">
+<h1>Imports</h1>
+</section>
+<div class="cell code" data-execution_count="1"
+data-colab="{&quot;base_uri&quot;:&quot;https://localhost:8080/&quot;}"
+id="NwqmNq7uJvc1" data-outputId="254d7a28-24bd-40c3-8a74-d6853034e2f1">
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="op">!</span>pip install transformers</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="op">!</span>pip install sentencepiece</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="op">!</span>pip install <span class="bu">open</span><span class="op">-</span>flamingo</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="op">!</span>pip install git<span class="op">+</span>https:<span class="op">//</span>github.com<span class="op">/</span>openai<span class="op">/</span>CLIP.git</span></code></pre></div>
+<div class="output stream stdout">
+<pre><code>Requirement already satisfied: transformers in /usr/local/lib/python3.10/dist-packages (4.35.2)
+Requirement already satisfied: filelock in /usr/local/lib/python3.10/dist-packages (from transformers) (3.13.1)
+Requirement already satisfied: huggingface-hub&lt;1.0,&gt;=0.16.4 in /usr/local/lib/python3.10/dist-packages (from transformers) (0.19.4)
+Requirement already satisfied: numpy&gt;=1.17 in /usr/local/lib/python3.10/dist-packages (from transformers) (1.23.5)
+Requirement already satisfied: packaging&gt;=20.0 in /usr/local/lib/python3.10/dist-packages (from transformers) (23.2)
+Requirement already satisfied: pyyaml&gt;=5.1 in /usr/local/lib/python3.10/dist-packages (from transformers) (6.0.1)
+Requirement already satisfied: regex!=2019.12.17 in /usr/local/lib/python3.10/dist-packages (from transformers) (2023.6.3)
+Requirement already satisfied: requests in /usr/local/lib/python3.10/dist-packages (from transformers) (2.31.0)
+Requirement already satisfied: tokenizers&lt;0.19,&gt;=0.14 in /usr/local/lib/python3.10/dist-packages (from transformers) (0.15.0)
+Requirement already satisfied: safetensors&gt;=0.3.1 in /usr/local/lib/python3.10/dist-packages (from transformers) (0.4.1)
+Requirement already satisfied: tqdm&gt;=4.27 in /usr/local/lib/python3.10/dist-packages (from transformers) (4.66.1)
+Requirement already satisfied: fsspec&gt;=2023.5.0 in /usr/local/lib/python3.10/dist-packages (from huggingface-hub&lt;1.0,&gt;=0.16.4-&gt;transformers) (2023.6.0)
+Requirement already satisfied: typing-extensions&gt;=3.7.4.3 in /usr/local/lib/python3.10/dist-packages (from huggingface-hub&lt;1.0,&gt;=0.16.4-&gt;transformers) (4.5.0)
+Requirement already satisfied: charset-normalizer&lt;4,&gt;=2 in /usr/local/lib/python3.10/dist-packages (from requests-&gt;transformers) (3.3.2)
+Requirement already satisfied: idna&lt;4,&gt;=2.5 in /usr/local/lib/python3.10/dist-packages (from requests-&gt;transformers) (3.6)
+Requirement already satisfied: urllib3&lt;3,&gt;=1.21.1 in /usr/local/lib/python3.10/dist-packages (from requests-&gt;transformers) (2.0.7)
+Requirement already satisfied: certifi&gt;=2017.4.17 in /usr/local/lib/python3.10/dist-packages (from requests-&gt;transformers) (2023.11.17)
+Requirement already satisfied: sentencepiece in /usr/local/lib/python3.10/dist-packages (0.1.98)
+Requirement already satisfied: open-flamingo in /usr/local/lib/python3.10/dist-packages (2.0.1)
+Requirement already satisfied: einops in /usr/local/lib/python3.10/dist-packages (from open-flamingo) (0.7.0)
+Requirement already satisfied: einops-exts in /usr/local/lib/python3.10/dist-packages (from open-flamingo) (0.0.4)
+Requirement already satisfied: transformers&gt;=4.28.1 in /usr/local/lib/python3.10/dist-packages (from open-flamingo) (4.35.2)
+Requirement already satisfied: torch==2.0.1 in /usr/local/lib/python3.10/dist-packages (from open-flamingo) (2.0.1)
+Requirement already satisfied: pillow in /usr/local/lib/python3.10/dist-packages (from open-flamingo) (9.4.0)
+Requirement already satisfied: open-clip-torch&gt;=2.16.0 in /usr/local/lib/python3.10/dist-packages (from open-flamingo) (2.23.0)
+Requirement already satisfied: sentencepiece==0.1.98 in /usr/local/lib/python3.10/dist-packages (from open-flamingo) (0.1.98)
+Requirement already satisfied: filelock in /usr/local/lib/python3.10/dist-packages (from torch==2.0.1-&gt;open-flamingo) (3.13.1)
+Requirement already satisfied: typing-extensions in /usr/local/lib/python3.10/dist-packages (from torch==2.0.1-&gt;open-flamingo) (4.5.0)
+Requirement already satisfied: sympy in /usr/local/lib/python3.10/dist-packages (from torch==2.0.1-&gt;open-flamingo) (1.12)
+Requirement already satisfied: networkx in /usr/local/lib/python3.10/dist-packages (from torch==2.0.1-&gt;open-flamingo) (3.2.1)
+Requirement already satisfied: jinja2 in /usr/local/lib/python3.10/dist-packages (from torch==2.0.1-&gt;open-flamingo) (3.1.2)
+Requirement already satisfied: nvidia-cuda-nvrtc-cu11==11.7.99 in /usr/local/lib/python3.10/dist-packages (from torch==2.0.1-&gt;open-flamingo) (11.7.99)
+Requirement already satisfied: nvidia-cuda-runtime-cu11==11.7.99 in /usr/local/lib/python3.10/dist-packages (from torch==2.0.1-&gt;open-flamingo) (11.7.99)
+Requirement already satisfied: nvidia-cuda-cupti-cu11==11.7.101 in /usr/local/lib/python3.10/dist-packages (from torch==2.0.1-&gt;open-flamingo) (11.7.101)
+Requirement already satisfied: nvidia-cudnn-cu11==8.5.0.96 in /usr/local/lib/python3.10/dist-packages (from torch==2.0.1-&gt;open-flamingo) (8.5.0.96)
+Requirement already satisfied: nvidia-cublas-cu11==11.10.3.66 in /usr/local/lib/python3.10/dist-packages (from torch==2.0.1-&gt;open-flamingo) (11.10.3.66)
+Requirement already satisfied: nvidia-cufft-cu11==10.9.0.58 in /usr/local/lib/python3.10/dist-packages (from torch==2.0.1-&gt;open-flamingo) (10.9.0.58)
+Requirement already satisfied: nvidia-curand-cu11==10.2.10.91 in /usr/local/lib/python3.10/dist-packages (from torch==2.0.1-&gt;open-flamingo) (10.2.10.91)
+Requirement already satisfied: nvidia-cusolver-cu11==11.4.0.1 in /usr/local/lib/python3.10/dist-packages (from torch==2.0.1-&gt;open-flamingo) (11.4.0.1)
+Requirement already satisfied: nvidia-cusparse-cu11==11.7.4.91 in /usr/local/lib/python3.10/dist-packages (from torch==2.0.1-&gt;open-flamingo) (11.7.4.91)
+Requirement already satisfied: nvidia-nccl-cu11==2.14.3 in /usr/local/lib/python3.10/dist-packages (from torch==2.0.1-&gt;open-flamingo) (2.14.3)
+Requirement already satisfied: nvidia-nvtx-cu11==11.7.91 in /usr/local/lib/python3.10/dist-packages (from torch==2.0.1-&gt;open-flamingo) (11.7.91)
+Requirement already satisfied: triton==2.0.0 in /usr/local/lib/python3.10/dist-packages (from torch==2.0.1-&gt;open-flamingo) (2.0.0)
+Requirement already satisfied: setuptools in /usr/local/lib/python3.10/dist-packages (from nvidia-cublas-cu11==11.10.3.66-&gt;torch==2.0.1-&gt;open-flamingo) (67.7.2)
+Requirement already satisfied: wheel in /usr/local/lib/python3.10/dist-packages (from nvidia-cublas-cu11==11.10.3.66-&gt;torch==2.0.1-&gt;open-flamingo) (0.42.0)
+Requirement already satisfied: cmake in /usr/local/lib/python3.10/dist-packages (from triton==2.0.0-&gt;torch==2.0.1-&gt;open-flamingo) (3.27.9)
+Requirement already satisfied: lit in /usr/local/lib/python3.10/dist-packages (from triton==2.0.0-&gt;torch==2.0.1-&gt;open-flamingo) (17.0.6)
+Requirement already satisfied: torchvision in /usr/local/lib/python3.10/dist-packages (from open-clip-torch&gt;=2.16.0-&gt;open-flamingo) (0.15.2)
+Requirement already satisfied: regex in /usr/local/lib/python3.10/dist-packages (from open-clip-torch&gt;=2.16.0-&gt;open-flamingo) (2023.6.3)
+Requirement already satisfied: ftfy in /usr/local/lib/python3.10/dist-packages (from open-clip-torch&gt;=2.16.0-&gt;open-flamingo) (6.1.3)
+Requirement already satisfied: tqdm in /usr/local/lib/python3.10/dist-packages (from open-clip-torch&gt;=2.16.0-&gt;open-flamingo) (4.66.1)
+Requirement already satisfied: huggingface-hub in /usr/local/lib/python3.10/dist-packages (from open-clip-torch&gt;=2.16.0-&gt;open-flamingo) (0.19.4)
+Requirement already satisfied: protobuf in /usr/local/lib/python3.10/dist-packages (from open-clip-torch&gt;=2.16.0-&gt;open-flamingo) (3.20.3)
+Requirement already satisfied: timm in /usr/local/lib/python3.10/dist-packages (from open-clip-torch&gt;=2.16.0-&gt;open-flamingo) (0.9.12)
+Requirement already satisfied: numpy&gt;=1.17 in /usr/local/lib/python3.10/dist-packages (from transformers&gt;=4.28.1-&gt;open-flamingo) (1.23.5)
+Requirement already satisfied: packaging&gt;=20.0 in /usr/local/lib/python3.10/dist-packages (from transformers&gt;=4.28.1-&gt;open-flamingo) (23.2)
+Requirement already satisfied: pyyaml&gt;=5.1 in /usr/local/lib/python3.10/dist-packages (from transformers&gt;=4.28.1-&gt;open-flamingo) (6.0.1)
+Requirement already satisfied: requests in /usr/local/lib/python3.10/dist-packages (from transformers&gt;=4.28.1-&gt;open-flamingo) (2.31.0)
+Requirement already satisfied: tokenizers&lt;0.19,&gt;=0.14 in /usr/local/lib/python3.10/dist-packages (from transformers&gt;=4.28.1-&gt;open-flamingo) (0.15.0)
+Requirement already satisfied: safetensors&gt;=0.3.1 in /usr/local/lib/python3.10/dist-packages (from transformers&gt;=4.28.1-&gt;open-flamingo) (0.4.1)
+Requirement already satisfied: fsspec&gt;=2023.5.0 in /usr/local/lib/python3.10/dist-packages (from huggingface-hub-&gt;open-clip-torch&gt;=2.16.0-&gt;open-flamingo) (2023.6.0)
+Requirement already satisfied: wcwidth&lt;0.3.0,&gt;=0.2.12 in /usr/local/lib/python3.10/dist-packages (from ftfy-&gt;open-clip-torch&gt;=2.16.0-&gt;open-flamingo) (0.2.12)
+Requirement already satisfied: MarkupSafe&gt;=2.0 in /usr/local/lib/python3.10/dist-packages (from jinja2-&gt;torch==2.0.1-&gt;open-flamingo) (2.1.3)
+Requirement already satisfied: charset-normalizer&lt;4,&gt;=2 in /usr/local/lib/python3.10/dist-packages (from requests-&gt;transformers&gt;=4.28.1-&gt;open-flamingo) (3.3.2)
+Requirement already satisfied: idna&lt;4,&gt;=2.5 in /usr/local/lib/python3.10/dist-packages (from requests-&gt;transformers&gt;=4.28.1-&gt;open-flamingo) (3.6)
+Requirement already satisfied: urllib3&lt;3,&gt;=1.21.1 in /usr/local/lib/python3.10/dist-packages (from requests-&gt;transformers&gt;=4.28.1-&gt;open-flamingo) (2.0.7)
+Requirement already satisfied: certifi&gt;=2017.4.17 in /usr/local/lib/python3.10/dist-packages (from requests-&gt;transformers&gt;=4.28.1-&gt;open-flamingo) (2023.11.17)
+Requirement already satisfied: mpmath&gt;=0.19 in /usr/local/lib/python3.10/dist-packages (from sympy-&gt;torch==2.0.1-&gt;open-flamingo) (1.3.0)
+Collecting git+https://github.com/openai/CLIP.git
+  Cloning https://github.com/openai/CLIP.git to /tmp/pip-req-build-0khvq0_0
+  Running command git clone --filter=blob:none --quiet https://github.com/openai/CLIP.git /tmp/pip-req-build-0khvq0_0
+  Resolved https://github.com/openai/CLIP.git to commit a1d071733d7111c9c014f024669f959182114e33
+  Preparing metadata (setup.py) ... ent already satisfied: ftfy in /usr/local/lib/python3.10/dist-packages (from clip==1.0) (6.1.3)
+Requirement already satisfied: regex in /usr/local/lib/python3.10/dist-packages (from clip==1.0) (2023.6.3)
+Requirement already satisfied: tqdm in /usr/local/lib/python3.10/dist-packages (from clip==1.0) (4.66.1)
+Requirement already satisfied: torch in /usr/local/lib/python3.10/dist-packages (from clip==1.0) (2.0.1)
+Requirement already satisfied: torchvision in /usr/local/lib/python3.10/dist-packages (from clip==1.0) (0.15.2)
+Requirement already satisfied: wcwidth&lt;0.3.0,&gt;=0.2.12 in /usr/local/lib/python3.10/dist-packages (from ftfy-&gt;clip==1.0) (0.2.12)
+Requirement already satisfied: filelock in /usr/local/lib/python3.10/dist-packages (from torch-&gt;clip==1.0) (3.13.1)
+Requirement already satisfied: typing-extensions in /usr/local/lib/python3.10/dist-packages (from torch-&gt;clip==1.0) (4.5.0)
+Requirement already satisfied: sympy in /usr/local/lib/python3.10/dist-packages (from torch-&gt;clip==1.0) (1.12)
+Requirement already satisfied: networkx in /usr/local/lib/python3.10/dist-packages (from torch-&gt;clip==1.0) (3.2.1)
+Requirement already satisfied: jinja2 in /usr/local/lib/python3.10/dist-packages (from torch-&gt;clip==1.0) (3.1.2)
+Requirement already satisfied: nvidia-cuda-nvrtc-cu11==11.7.99 in /usr/local/lib/python3.10/dist-packages (from torch-&gt;clip==1.0) (11.7.99)
+Requirement already satisfied: nvidia-cuda-runtime-cu11==11.7.99 in /usr/local/lib/python3.10/dist-packages (from torch-&gt;clip==1.0) (11.7.99)
+Requirement already satisfied: nvidia-cuda-cupti-cu11==11.7.101 in /usr/local/lib/python3.10/dist-packages (from torch-&gt;clip==1.0) (11.7.101)
+Requirement already satisfied: nvidia-cudnn-cu11==8.5.0.96 in /usr/local/lib/python3.10/dist-packages (from torch-&gt;clip==1.0) (8.5.0.96)
+Requirement already satisfied: nvidia-cublas-cu11==11.10.3.66 in /usr/local/lib/python3.10/dist-packages (from torch-&gt;clip==1.0) (11.10.3.66)
+Requirement already satisfied: nvidia-cufft-cu11==10.9.0.58 in /usr/local/lib/python3.10/dist-packages (from torch-&gt;clip==1.0) (10.9.0.58)
+Requirement already satisfied: nvidia-curand-cu11==10.2.10.91 in /usr/local/lib/python3.10/dist-packages (from torch-&gt;clip==1.0) (10.2.10.91)
+Requirement already satisfied: nvidia-cusolver-cu11==11.4.0.1 in /usr/local/lib/python3.10/dist-packages (from torch-&gt;clip==1.0) (11.4.0.1)
+Requirement already satisfied: nvidia-cusparse-cu11==11.7.4.91 in /usr/local/lib/python3.10/dist-packages (from torch-&gt;clip==1.0) (11.7.4.91)
+Requirement already satisfied: nvidia-nccl-cu11==2.14.3 in /usr/local/lib/python3.10/dist-packages (from torch-&gt;clip==1.0) (2.14.3)
+Requirement already satisfied: nvidia-nvtx-cu11==11.7.91 in /usr/local/lib/python3.10/dist-packages (from torch-&gt;clip==1.0) (11.7.91)
+Requirement already satisfied: triton==2.0.0 in /usr/local/lib/python3.10/dist-packages (from torch-&gt;clip==1.0) (2.0.0)
+Requirement already satisfied: setuptools in /usr/local/lib/python3.10/dist-packages (from nvidia-cublas-cu11==11.10.3.66-&gt;torch-&gt;clip==1.0) (67.7.2)
+Requirement already satisfied: wheel in /usr/local/lib/python3.10/dist-packages (from nvidia-cublas-cu11==11.10.3.66-&gt;torch-&gt;clip==1.0) (0.42.0)
+Requirement already satisfied: cmake in /usr/local/lib/python3.10/dist-packages (from triton==2.0.0-&gt;torch-&gt;clip==1.0) (3.27.9)
+Requirement already satisfied: lit in /usr/local/lib/python3.10/dist-packages (from triton==2.0.0-&gt;torch-&gt;clip==1.0) (17.0.6)
+Requirement already satisfied: numpy in /usr/local/lib/python3.10/dist-packages (from torchvision-&gt;clip==1.0) (1.23.5)
+Requirement already satisfied: requests in /usr/local/lib/python3.10/dist-packages (from torchvision-&gt;clip==1.0) (2.31.0)
+Requirement already satisfied: pillow!=8.3.*,&gt;=5.3.0 in /usr/local/lib/python3.10/dist-packages (from torchvision-&gt;clip==1.0) (9.4.0)
+Requirement already satisfied: MarkupSafe&gt;=2.0 in /usr/local/lib/python3.10/dist-packages (from jinja2-&gt;torch-&gt;clip==1.0) (2.1.3)
+Requirement already satisfied: charset-normalizer&lt;4,&gt;=2 in /usr/local/lib/python3.10/dist-packages (from requests-&gt;torchvision-&gt;clip==1.0) (3.3.2)
+Requirement already satisfied: idna&lt;4,&gt;=2.5 in /usr/local/lib/python3.10/dist-packages (from requests-&gt;torchvision-&gt;clip==1.0) (3.6)
+Requirement already satisfied: urllib3&lt;3,&gt;=1.21.1 in /usr/local/lib/python3.10/dist-packages (from requests-&gt;torchvision-&gt;clip==1.0) (2.0.7)
+Requirement already satisfied: certifi&gt;=2017.4.17 in /usr/local/lib/python3.10/dist-packages (from requests-&gt;torchvision-&gt;clip==1.0) (2023.11.17)
+Requirement already satisfied: mpmath&gt;=0.19 in /usr/local/lib/python3.10/dist-packages (from sympy-&gt;torch-&gt;clip==1.0) (1.3.0)
+</code></pre>
+</div>
+</div>
+<div class="cell code" data-execution_count="2"
+data-colab="{&quot;base_uri&quot;:&quot;https://localhost:8080/&quot;}"
+id="1gjdPnRdEvdJ" data-outputId="79823173-2e56-455e-c607-f6273c1f2d06">
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> clip</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> torch</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> PIL.Image</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> torch <span class="im">import</span> nn</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> enum <span class="im">import</span> Enum</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> skimage.io <span class="im">as</span> io</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> torch.nn.functional <span class="im">as</span> nnf</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> typing <span class="im">import</span> Tuple, List, Union, Optional</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> transformers <span class="im">import</span> AutoProcessor, SeamlessM4TModel</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> transformers <span class="im">import</span> GPT2Tokenizer, GPT2LMHeadModel, AdamW, get_linear_schedule_with_warmup</span></code></pre></div>
+<div class="output stream stderr">
+<pre><code>/usr/local/lib/python3.10/dist-packages/transformers/deepspeed.py:23: FutureWarning: transformers.deepspeed module is deprecated and will be removed in a future version. Please import deepspeed modules directly from transformers.integrations
+  warnings.warn(
+</code></pre>
+</div>
+</div>
+<section id="drive-downloader" class="cell markdown" id="TBPiURzh4E6t">
+<h1>Drive Downloader</h1>
+</section>
+<div class="cell markdown" id="DVS1goHug2s_">
+<p>Don't touch this part !!</p>
+</div>
+<div class="cell code" data-execution_count="5" id="gne590Qo4HD8">
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pydrive.auth <span class="im">import</span> GoogleAuth</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pydrive.drive <span class="im">import</span> GoogleDrive</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> google.colab <span class="im">import</span> auth</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> oauth2client.client <span class="im">import</span> GoogleCredentials</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>download_with_pydrive <span class="op">=</span> <span class="va">True</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Downloader(<span class="bu">object</span>):</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, use_pydrive):</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.use_pydrive <span class="op">=</span> use_pydrive</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="va">self</span>.use_pydrive:</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>            <span class="va">self</span>.authenticate()</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> authenticate(<span class="va">self</span>):</span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>        auth.authenticate_user()</span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>        gauth <span class="op">=</span> GoogleAuth()</span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>        gauth.credentials <span class="op">=</span> GoogleCredentials.get_application_default()</span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.drive <span class="op">=</span> GoogleDrive(gauth)</span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> download_file(<span class="va">self</span>, file_id, file_dst):</span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="va">self</span>.use_pydrive:</span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a>            downloaded <span class="op">=</span> <span class="va">self</span>.drive.CreateFile({<span class="st">&#39;id&#39;</span>:file_id})</span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a>            downloaded.FetchMetadata(fetch_all<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a>            downloaded.GetContentFile(file_dst)</span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a>        <span class="cf">else</span>:</span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a>            <span class="op">!</span>gdown <span class="op">--</span><span class="bu">id</span> $file_id <span class="op">-</span>O $file_dst</span>
+<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a>downloader <span class="op">=</span> Downloader(download_with_pydrive)</span></code></pre></div>
+</div>
+<section id="translation" class="cell markdown" id="79uYDFsEEIgl">
+<h1>Translation</h1>
+</section>
+<div class="cell markdown" id="zsVKIa6Zg_N9">
+<p>In this segment, our objective is to employ a pre-existing
+translation model for converting text between English and Farsi. Your
+task is to finalize the provided functions and test them on the provided
+texts.</p>
+</div>
+<div class="cell code" data-execution_count="6" id="EBJGeK_F_f4a">
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>device <span class="op">=</span> torch.device(<span class="st">&quot;cuda&quot;</span> <span class="cf">if</span> torch.cuda.is_available() <span class="cf">else</span> <span class="st">&quot;cpu&quot;</span>)</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>torch.set_default_device(device)</span></code></pre></div>
+</div>
+<div class="cell code" data-execution_count="7"
+data-colab="{&quot;base_uri&quot;:&quot;https://localhost:8080/&quot;,&quot;height&quot;:307,&quot;referenced_widgets&quot;:[&quot;d9adecfb893548b695effc9ba231f95c&quot;,&quot;395539cf3a60429caae8e55d89e67171&quot;,&quot;dae159dcada045219ed125772d686f92&quot;,&quot;7889b0025cef4588a97ff1f5698f55e7&quot;,&quot;0b973e8d81ff420e89f925f9750b7a56&quot;,&quot;c1f65384fa464e9292cbb9eeabb4568e&quot;,&quot;6f2e98f4a3734a719b0bf9986af3bcf8&quot;,&quot;5b4ee3d5857146508073251d294bc46f&quot;,&quot;e7c0892ef011406e8965a17dad7ddbc5&quot;,&quot;5193cb04261b46babbc4195d3afff898&quot;,&quot;64fa6fcfcb8e4205b9d46c111e6b57c9&quot;,&quot;0deff26bbd8546f4ac4027e5e9e965f1&quot;,&quot;c549d1304fb3489ca962357c73103e20&quot;,&quot;49bd416b0ce4430eae2bc5c94a554298&quot;,&quot;8b77d9b500314787b064ac6895f3b5fd&quot;,&quot;8288b6a21d8948ddbcba847c25148777&quot;,&quot;bd74004b03e9472eb5c01eb085bcbcb8&quot;,&quot;1fb58f501d25409d8dc8e6a5fd2f7d2d&quot;,&quot;8f7635c52bc247aba210a7702e5be5dc&quot;,&quot;a0945f52b26e4a5cb34a1044bb9c6ea0&quot;,&quot;70b355485cb4431dbc505542a8988f20&quot;,&quot;ac56fd01986b419d998a1618b94d67d3&quot;,&quot;1f60741c7b0343d18ade0a136b40d2b2&quot;,&quot;9952ca7469894c2993669d7b52b64eb7&quot;,&quot;73f6d590215744a7adfd4efd4366a68f&quot;,&quot;e35b3375f57c4eca8b7bbe4ebf87ca7f&quot;,&quot;3bba1514170b401f971c3c60abf907fd&quot;,&quot;dd7b9d4df6f14132adac23ace9f7b2e9&quot;,&quot;cfe6e86b566844d9a479e6f39aba8101&quot;,&quot;09fcdcb85a5540bb9931bb14553d1478&quot;,&quot;29b82cd1006b450d9153ebf1187d1d10&quot;,&quot;ca9fb6483fb7470f9c0b2d6068cc341a&quot;,&quot;8cf4e63b71fa4f07b126ed41f29fe6f8&quot;,&quot;60eebf20e9ee43148b77a12f7eaa27db&quot;,&quot;14162cfbe0ce4154b3f782014ebc669a&quot;,&quot;bd1d92a83cdf4a08a234cb22de22bd3d&quot;,&quot;902d7a7158774dce89eb57a5d9315ae6&quot;,&quot;5c2c32c70af3422fb0db458e578c84a4&quot;,&quot;57b6cb29de41452383e1aefc25ae9b83&quot;,&quot;6bbf42a7fb214987b3394a843ca7d2ed&quot;,&quot;7b49b3da3b224335886e7e9bdb09c0e1&quot;,&quot;1a5f524a93f5456e821b7daed466d264&quot;,&quot;8cdd7af09fe94df09841096e011d6cfb&quot;,&quot;14bd65f03fe54f5a8fd68b70c550573c&quot;,&quot;bb1a7e5700ba493bb4d7d251e3eb8e62&quot;,&quot;c0ac37cfbcdb4337bda4026244a8f04e&quot;,&quot;a9f1767ed2ad48689313643ff247f460&quot;,&quot;2e401cf73f4840709d05d28421e43f3b&quot;,&quot;b5ce64d25d494794b9d6b97f34fbb918&quot;,&quot;b1c488bbcfdb4527b8d579d59d397159&quot;,&quot;3e9ad6fb7f9c4eef81c09e93d81b9f6b&quot;,&quot;bb74c6b53fed4339b12643f2473d9c15&quot;,&quot;55a07f8a626c42078d3ab8d8bc89bead&quot;,&quot;c4602d9d4d244bb29c914d72c01d37d7&quot;,&quot;f3a483071a7043c282986377875302ac&quot;,&quot;8e03bb7867ca49ea84fc28b1ac553dd0&quot;,&quot;c97b86d457a846caa7b4bb9a3c654363&quot;,&quot;b4e3fd14750e42feaf1e53eb39bba581&quot;,&quot;666ea7e51fa34d2c869377ee36d0bf98&quot;,&quot;00179cf541a14ccd9ce4f17195dabd3c&quot;,&quot;b9eb4641f6814e4a9e9527a60d3cca7d&quot;,&quot;2655f1235963483889f69c9019bc5b34&quot;,&quot;ef2b8e49868a4d83af52e7f74e5a4954&quot;,&quot;5c9cf4ff156b4c2699291770b5122211&quot;,&quot;e51673dd19f242b8809fbfd1fb743604&quot;,&quot;4c276796134048abbadeb5a2bd9d9af1&quot;,&quot;cfda5189169848f0a09f03553a70057d&quot;,&quot;f214fd30ac2241e1892555f0da2d5990&quot;,&quot;96d10b4e40e947dc95b33486b04ca616&quot;,&quot;750ee47a85a3499ca91a67b7d600100c&quot;,&quot;7b63d0961dbf4c9e996a1a269aa9463a&quot;,&quot;e80e0a8aca85483a8823fcd4a1fb40df&quot;,&quot;3b07a36c8c8040cc970791e266678ff2&quot;,&quot;46089f3cb97a4c8fbbc085ae0a8f22d0&quot;,&quot;674a354c4e45467d938c9a65f1f99083&quot;,&quot;aa8d6e6c634d4cb5a17ceb45b1821178&quot;,&quot;bcd3dd4e0b424fbcb6e8cc2955982f8e&quot;,&quot;0b31a54426194061a9f9c5d19edb14c3&quot;,&quot;15f30bc2cad54102b2ed2e5f898a305f&quot;,&quot;f01ff0460d35462c91351c6df0880fde&quot;,&quot;1ab64431f62340dd9dc6fd4b4f5db657&quot;,&quot;688347ac8f98443d8cd8e70221107421&quot;,&quot;f8a8c7b40837484da56c06d62889826b&quot;,&quot;d538b7381451426780da19d240ebc866&quot;,&quot;36d590fc14f342c493a45ac07e2d5ee1&quot;,&quot;be925955ac0a48dc9c008676561c1b09&quot;,&quot;7d1c95823753461f954e6cda97e57713&quot;,&quot;56ecec6a5b7549fd88b857c186813724&quot;]}"
+id="ck10ZJgbD_qk" data-outputId="a959cf9d-96a9-40de-acbc-83858fbf7888">
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>processor <span class="op">=</span> AutoProcessor.from_pretrained(<span class="st">&quot;facebook/hf-seamless-m4t-medium&quot;</span>)</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> SeamlessM4TModel.from_pretrained(<span class="st">&quot;facebook/hf-seamless-m4t-medium&quot;</span>)</span></code></pre></div>
+<div class="output display_data">
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span><span class="dt">&quot;model_id&quot;</span><span class="fu">:</span><span class="st">&quot;d9adecfb893548b695effc9ba231f95c&quot;</span><span class="fu">,</span><span class="dt">&quot;version_major&quot;</span><span class="fu">:</span><span class="dv">2</span><span class="fu">,</span><span class="dt">&quot;version_minor&quot;</span><span class="fu">:</span><span class="dv">0</span><span class="fu">}</span></span></code></pre></div>
+</div>
+<div class="output display_data">
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span><span class="dt">&quot;model_id&quot;</span><span class="fu">:</span><span class="st">&quot;0deff26bbd8546f4ac4027e5e9e965f1&quot;</span><span class="fu">,</span><span class="dt">&quot;version_major&quot;</span><span class="fu">:</span><span class="dv">2</span><span class="fu">,</span><span class="dt">&quot;version_minor&quot;</span><span class="fu">:</span><span class="dv">0</span><span class="fu">}</span></span></code></pre></div>
+</div>
+<div class="output display_data">
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span><span class="dt">&quot;model_id&quot;</span><span class="fu">:</span><span class="st">&quot;1f60741c7b0343d18ade0a136b40d2b2&quot;</span><span class="fu">,</span><span class="dt">&quot;version_major&quot;</span><span class="fu">:</span><span class="dv">2</span><span class="fu">,</span><span class="dt">&quot;version_minor&quot;</span><span class="fu">:</span><span class="dv">0</span><span class="fu">}</span></span></code></pre></div>
+</div>
+<div class="output display_data">
+<div class="sourceCode" id="cb11"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span><span class="dt">&quot;model_id&quot;</span><span class="fu">:</span><span class="st">&quot;60eebf20e9ee43148b77a12f7eaa27db&quot;</span><span class="fu">,</span><span class="dt">&quot;version_major&quot;</span><span class="fu">:</span><span class="dv">2</span><span class="fu">,</span><span class="dt">&quot;version_minor&quot;</span><span class="fu">:</span><span class="dv">0</span><span class="fu">}</span></span></code></pre></div>
+</div>
+<div class="output display_data">
+<div class="sourceCode" id="cb12"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span><span class="dt">&quot;model_id&quot;</span><span class="fu">:</span><span class="st">&quot;bb1a7e5700ba493bb4d7d251e3eb8e62&quot;</span><span class="fu">,</span><span class="dt">&quot;version_major&quot;</span><span class="fu">:</span><span class="dv">2</span><span class="fu">,</span><span class="dt">&quot;version_minor&quot;</span><span class="fu">:</span><span class="dv">0</span><span class="fu">}</span></span></code></pre></div>
+</div>
+<div class="output stream stderr">
+<pre><code>Special tokens have been added in the vocabulary, make sure the associated word embeddings are fine-tuned or trained.
+Special tokens have been added in the vocabulary, make sure the associated word embeddings are fine-tuned or trained.
+</code></pre>
+</div>
+<div class="output display_data">
+<div class="sourceCode" id="cb14"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span><span class="dt">&quot;model_id&quot;</span><span class="fu">:</span><span class="st">&quot;8e03bb7867ca49ea84fc28b1ac553dd0&quot;</span><span class="fu">,</span><span class="dt">&quot;version_major&quot;</span><span class="fu">:</span><span class="dv">2</span><span class="fu">,</span><span class="dt">&quot;version_minor&quot;</span><span class="fu">:</span><span class="dv">0</span><span class="fu">}</span></span></code></pre></div>
+</div>
+<div class="output display_data">
+<div class="sourceCode" id="cb15"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span><span class="dt">&quot;model_id&quot;</span><span class="fu">:</span><span class="st">&quot;cfda5189169848f0a09f03553a70057d&quot;</span><span class="fu">,</span><span class="dt">&quot;version_major&quot;</span><span class="fu">:</span><span class="dv">2</span><span class="fu">,</span><span class="dt">&quot;version_minor&quot;</span><span class="fu">:</span><span class="dv">0</span><span class="fu">}</span></span></code></pre></div>
+</div>
+<div class="output display_data">
+<div class="sourceCode" id="cb16"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span><span class="dt">&quot;model_id&quot;</span><span class="fu">:</span><span class="st">&quot;0b31a54426194061a9f9c5d19edb14c3&quot;</span><span class="fu">,</span><span class="dt">&quot;version_major&quot;</span><span class="fu">:</span><span class="dv">2</span><span class="fu">,</span><span class="dt">&quot;version_minor&quot;</span><span class="fu">:</span><span class="dv">0</span><span class="fu">}</span></span></code></pre></div>
+</div>
+</div>
+<div class="cell code" data-execution_count="32" id="cgBWud9BYX9K">
+<div class="sourceCode" id="cb17"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>mt_processor, mt_model <span class="op">=</span> processor, model.to(device)</span></code></pre></div>
+</div>
+<div class="cell code" data-execution_count="33" id="jTHaRYvaI5cx">
+<div class="sourceCode" id="cb18"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> translate_english_to_persian(text):</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">&quot;&quot;&quot;</span></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a><span class="co">    Translates English to Persian: Involves tokenizing English text, processing through the model,</span></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a><span class="co">    and decoding the model&#39;s output to Persian.</span></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a><span class="co">    &quot;&quot;&quot;</span></span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>    translation_input <span class="op">=</span> mt_processor(text<span class="op">=</span>text, src_lang<span class="op">=</span><span class="st">&quot;eng&quot;</span>, return_tensors<span class="op">=</span><span class="st">&quot;pt&quot;</span>).to(device)</span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>    text_array <span class="op">=</span> mt_model.generate(<span class="op">**</span>translation_input, text_num_beams<span class="op">=</span><span class="dv">4</span>, tgt_lang<span class="op">=</span><span class="st">&quot;pes&quot;</span>, generate_speech<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> mt_processor.decode(text_array[<span class="dv">0</span>].tolist()[<span class="dv">0</span>], skip_special_tokens<span class="op">=</span><span class="va">True</span>)</span></code></pre></div>
+</div>
+<div class="cell code" data-execution_count="29" id="h_aZY40YKi6o">
+<div class="sourceCode" id="cb19"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> translate_persian_to_english(text):</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">&quot;&quot;&quot;</span></span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a><span class="co">    Translates English to Persian: Involves tokenizing English text, processing through the model,</span></span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a><span class="co">    and decoding the model&#39;s output to Persian.</span></span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a><span class="co">    &quot;&quot;&quot;</span></span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>    translation_input <span class="op">=</span> mt_processor(text<span class="op">=</span>text, src_lang<span class="op">=</span><span class="st">&quot;pes&quot;</span>, return_tensors<span class="op">=</span><span class="st">&quot;pt&quot;</span>).to(device)</span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>    text_array <span class="op">=</span> mt_model.generate(<span class="op">**</span>translation_input, text_num_beams<span class="op">=</span><span class="dv">4</span>, tgt_lang<span class="op">=</span><span class="st">&quot;eng&quot;</span>, generate_speech<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> mt_processor.decode(text_array[<span class="dv">0</span>].tolist()[<span class="dv">0</span>], skip_special_tokens<span class="op">=</span><span class="va">True</span>)</span></code></pre></div>
+</div>
+<div class="cell code" data-execution_count="34"
+data-colab="{&quot;base_uri&quot;:&quot;https://localhost:8080/&quot;,&quot;height&quot;:35}"
+id="it4wsSylMBRv" data-outputId="2a5389be-93d3-4996-a4d6-f4bb56c4da9e">
+<div class="sourceCode" id="cb20"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>translate_english_to_persian(<span class="st">&#39;Levi is the best anime character ever!&#39;</span>)</span></code></pre></div>
+<div class="output execute_result" data-execution_count="34">
+<div class="sourceCode" id="cb21"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span><span class="dt">&quot;type&quot;</span><span class="fu">:</span><span class="st">&quot;string&quot;</span><span class="fu">}</span></span></code></pre></div>
+</div>
+</div>
+<div class="cell code" data-execution_count="73"
+data-colab="{&quot;base_uri&quot;:&quot;https://localhost:8080/&quot;,&quot;height&quot;:35}"
+id="vfrkCGjfMHKW" data-outputId="ab1a85da-2746-442f-e737-4b62a9016790">
+<div class="sourceCode" id="cb22"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>translate_persian_to_english(<span class="st">&#39;انسان به منافع هیچ موجودی جز خود نمی‌اندیشد&#39;</span>)</span></code></pre></div>
+<div class="output execute_result" data-execution_count="73">
+<div class="sourceCode" id="cb23"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span><span class="dt">&quot;type&quot;</span><span class="fu">:</span><span class="st">&quot;string&quot;</span><span class="fu">}</span></span></code></pre></div>
+</div>
+</div>
+<section id="clipcap" class="cell markdown" id="yR5WSQNJrOJv">
+<h1>ClipCap</h1>
+</section>
+<div class="cell markdown" id="q-5-qcSTprAq">
+<p>In this part, our goal is to complete the implementation of the
+ClipCap model. To achieve this, it's crucial to thoroughly review the
+associated paper to understant the model's functioning. Please ensure
+that modifications are solely made within the specified section,
+avoiding alterations elsewhere in the model to prevent potential issues
+when loading weights.</p>
+</div>
+<section id="base-modules" class="cell markdown" id="tXTOB1LQrToh">
+<h2>Base Modules</h2>
+</section>
+<div class="cell markdown" id="Zi1ti1r2pjCT">
+<p>Don't touch this either :)</p>
+</div>
+<div class="cell code" data-execution_count="13" id="zprPi4gYrMJq">
+<div class="sourceCode" id="cb24"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> MappingType(Enum):</span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>    MLP <span class="op">=</span> <span class="st">&#39;mlp&#39;</span></span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>    Transformer <span class="op">=</span> <span class="st">&#39;transformer&#39;</span></span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> MlpTransformer(nn.Module):</span>
+<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a>     <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, in_dim, h_dim, out_d: Optional[<span class="bu">int</span>] <span class="op">=</span> <span class="va">None</span>, act<span class="op">=</span>nnf.relu, dropout<span class="op">=</span><span class="fl">0.</span>):</span>
+<span id="cb24-8"><a href="#cb24-8" aria-hidden="true" tabindex="-1"></a>         <span class="bu">super</span>().<span class="fu">__init__</span>()</span>
+<span id="cb24-9"><a href="#cb24-9" aria-hidden="true" tabindex="-1"></a>         out_d <span class="op">=</span> out_d <span class="cf">if</span> out_d <span class="kw">is</span> <span class="kw">not</span> <span class="va">None</span> <span class="cf">else</span> in_dim</span>
+<span id="cb24-10"><a href="#cb24-10" aria-hidden="true" tabindex="-1"></a>         <span class="va">self</span>.fc1 <span class="op">=</span> nn.Linear(in_dim, h_dim)</span>
+<span id="cb24-11"><a href="#cb24-11" aria-hidden="true" tabindex="-1"></a>         <span class="va">self</span>.act <span class="op">=</span> act</span>
+<span id="cb24-12"><a href="#cb24-12" aria-hidden="true" tabindex="-1"></a>         <span class="va">self</span>.fc2 <span class="op">=</span> nn.Linear(h_dim, out_d)</span>
+<span id="cb24-13"><a href="#cb24-13" aria-hidden="true" tabindex="-1"></a>         <span class="va">self</span>.dropout <span class="op">=</span> nn.Dropout(dropout)</span>
+<span id="cb24-14"><a href="#cb24-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-15"><a href="#cb24-15" aria-hidden="true" tabindex="-1"></a>     <span class="kw">def</span> forward(<span class="va">self</span>, x):</span>
+<span id="cb24-16"><a href="#cb24-16" aria-hidden="true" tabindex="-1"></a>         x <span class="op">=</span> <span class="va">self</span>.fc1(x)</span>
+<span id="cb24-17"><a href="#cb24-17" aria-hidden="true" tabindex="-1"></a>         x <span class="op">=</span> <span class="va">self</span>.act(x)</span>
+<span id="cb24-18"><a href="#cb24-18" aria-hidden="true" tabindex="-1"></a>         x <span class="op">=</span> <span class="va">self</span>.dropout(x)</span>
+<span id="cb24-19"><a href="#cb24-19" aria-hidden="true" tabindex="-1"></a>         x <span class="op">=</span> <span class="va">self</span>.fc2(x)</span>
+<span id="cb24-20"><a href="#cb24-20" aria-hidden="true" tabindex="-1"></a>         x <span class="op">=</span> <span class="va">self</span>.dropout(x)</span>
+<span id="cb24-21"><a href="#cb24-21" aria-hidden="true" tabindex="-1"></a>         <span class="cf">return</span> x</span>
+<span id="cb24-22"><a href="#cb24-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-23"><a href="#cb24-23" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> MLP(nn.Module):</span>
+<span id="cb24-24"><a href="#cb24-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-25"><a href="#cb24-25" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> forward(<span class="va">self</span>, x: torch.Tensor) <span class="op">-&gt;</span> torch.Tensor:</span>
+<span id="cb24-26"><a href="#cb24-26" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">self</span>.model(x)</span>
+<span id="cb24-27"><a href="#cb24-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-28"><a href="#cb24-28" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, sizes: Tuple[<span class="bu">int</span>, ...], bias<span class="op">=</span><span class="va">True</span>, act<span class="op">=</span>nn.Tanh):</span>
+<span id="cb24-29"><a href="#cb24-29" aria-hidden="true" tabindex="-1"></a>        <span class="bu">super</span>(MLP, <span class="va">self</span>).<span class="fu">__init__</span>()</span>
+<span id="cb24-30"><a href="#cb24-30" aria-hidden="true" tabindex="-1"></a>        layers <span class="op">=</span> []</span>
+<span id="cb24-31"><a href="#cb24-31" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="bu">len</span>(sizes) <span class="op">-</span> <span class="dv">1</span>):</span>
+<span id="cb24-32"><a href="#cb24-32" aria-hidden="true" tabindex="-1"></a>            layers.append(nn.Linear(sizes[i], sizes[i <span class="op">+</span> <span class="dv">1</span>], bias<span class="op">=</span>bias))</span>
+<span id="cb24-33"><a href="#cb24-33" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> i <span class="op">&lt;</span> <span class="bu">len</span>(sizes) <span class="op">-</span> <span class="dv">2</span>:</span>
+<span id="cb24-34"><a href="#cb24-34" aria-hidden="true" tabindex="-1"></a>                layers.append(act())</span>
+<span id="cb24-35"><a href="#cb24-35" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.model <span class="op">=</span> nn.Sequential(<span class="op">*</span>layers)</span>
+<span id="cb24-36"><a href="#cb24-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-37"><a href="#cb24-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-38"><a href="#cb24-38" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> MultiHeadAttention(nn.Module):</span>
+<span id="cb24-39"><a href="#cb24-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-40"><a href="#cb24-40" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, dim_self, dim_ref, num_heads, bias<span class="op">=</span><span class="va">True</span>, dropout<span class="op">=</span><span class="fl">0.</span>):</span>
+<span id="cb24-41"><a href="#cb24-41" aria-hidden="true" tabindex="-1"></a>        <span class="bu">super</span>().<span class="fu">__init__</span>()</span>
+<span id="cb24-42"><a href="#cb24-42" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.num_heads <span class="op">=</span> num_heads</span>
+<span id="cb24-43"><a href="#cb24-43" aria-hidden="true" tabindex="-1"></a>        head_dim <span class="op">=</span> dim_self <span class="op">//</span> num_heads</span>
+<span id="cb24-44"><a href="#cb24-44" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.scale <span class="op">=</span> head_dim <span class="op">**</span> <span class="op">-</span><span class="fl">0.5</span></span>
+<span id="cb24-45"><a href="#cb24-45" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.to_queries <span class="op">=</span> nn.Linear(dim_self, dim_self, bias<span class="op">=</span>bias)</span>
+<span id="cb24-46"><a href="#cb24-46" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.to_keys_values <span class="op">=</span> nn.Linear(dim_ref, dim_self <span class="op">*</span> <span class="dv">2</span>, bias<span class="op">=</span>bias)</span>
+<span id="cb24-47"><a href="#cb24-47" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.project <span class="op">=</span> nn.Linear(dim_self, dim_self)</span>
+<span id="cb24-48"><a href="#cb24-48" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.dropout <span class="op">=</span> nn.Dropout(dropout)</span>
+<span id="cb24-49"><a href="#cb24-49" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-50"><a href="#cb24-50" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> forward(<span class="va">self</span>, x, y<span class="op">=</span><span class="va">None</span>, mask<span class="op">=</span><span class="va">None</span>):</span>
+<span id="cb24-51"><a href="#cb24-51" aria-hidden="true" tabindex="-1"></a>        y <span class="op">=</span> y <span class="cf">if</span> y <span class="kw">is</span> <span class="kw">not</span> <span class="va">None</span> <span class="cf">else</span> x</span>
+<span id="cb24-52"><a href="#cb24-52" aria-hidden="true" tabindex="-1"></a>        b, n, c <span class="op">=</span> x.shape</span>
+<span id="cb24-53"><a href="#cb24-53" aria-hidden="true" tabindex="-1"></a>        _, m, d <span class="op">=</span> y.shape</span>
+<span id="cb24-54"><a href="#cb24-54" aria-hidden="true" tabindex="-1"></a>        <span class="co"># b n h dh</span></span>
+<span id="cb24-55"><a href="#cb24-55" aria-hidden="true" tabindex="-1"></a>        queries <span class="op">=</span> <span class="va">self</span>.to_queries(x).reshape(b, n, <span class="va">self</span>.num_heads, c <span class="op">//</span> <span class="va">self</span>.num_heads)</span>
+<span id="cb24-56"><a href="#cb24-56" aria-hidden="true" tabindex="-1"></a>        <span class="co"># b m 2 h dh</span></span>
+<span id="cb24-57"><a href="#cb24-57" aria-hidden="true" tabindex="-1"></a>        keys_values <span class="op">=</span> <span class="va">self</span>.to_keys_values(y).reshape(b, m, <span class="dv">2</span>, <span class="va">self</span>.num_heads, c <span class="op">//</span> <span class="va">self</span>.num_heads)</span>
+<span id="cb24-58"><a href="#cb24-58" aria-hidden="true" tabindex="-1"></a>        keys, values <span class="op">=</span> keys_values[:, :, <span class="dv">0</span>], keys_values[:, :, <span class="dv">1</span>]</span>
+<span id="cb24-59"><a href="#cb24-59" aria-hidden="true" tabindex="-1"></a>        attention <span class="op">=</span> torch.einsum(<span class="st">&#39;bnhd,bmhd-&gt;bnmh&#39;</span>, queries, keys) <span class="op">*</span> <span class="va">self</span>.scale</span>
+<span id="cb24-60"><a href="#cb24-60" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> mask <span class="kw">is</span> <span class="kw">not</span> <span class="va">None</span>:</span>
+<span id="cb24-61"><a href="#cb24-61" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> mask.dim() <span class="op">==</span> <span class="dv">2</span>:</span>
+<span id="cb24-62"><a href="#cb24-62" aria-hidden="true" tabindex="-1"></a>                mask <span class="op">=</span> mask.unsqueeze(<span class="dv">1</span>)</span>
+<span id="cb24-63"><a href="#cb24-63" aria-hidden="true" tabindex="-1"></a>            attention <span class="op">=</span> attention.masked_fill(mask.unsqueeze(<span class="dv">3</span>), <span class="bu">float</span>(<span class="st">&quot;-inf&quot;</span>))</span>
+<span id="cb24-64"><a href="#cb24-64" aria-hidden="true" tabindex="-1"></a>        attention <span class="op">=</span> attention.softmax(dim<span class="op">=</span><span class="dv">2</span>)</span>
+<span id="cb24-65"><a href="#cb24-65" aria-hidden="true" tabindex="-1"></a>        out <span class="op">=</span> torch.einsum(<span class="st">&#39;bnmh,bmhd-&gt;bnhd&#39;</span>, attention, values).reshape(b, n, c)</span>
+<span id="cb24-66"><a href="#cb24-66" aria-hidden="true" tabindex="-1"></a>        out <span class="op">=</span> <span class="va">self</span>.project(out)</span>
+<span id="cb24-67"><a href="#cb24-67" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> out, attention</span>
+<span id="cb24-68"><a href="#cb24-68" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-69"><a href="#cb24-69" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-70"><a href="#cb24-70" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> TransformerLayer(nn.Module):</span>
+<span id="cb24-71"><a href="#cb24-71" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-72"><a href="#cb24-72" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> forward_with_attention(<span class="va">self</span>, x, y<span class="op">=</span><span class="va">None</span>, mask<span class="op">=</span><span class="va">None</span>):</span>
+<span id="cb24-73"><a href="#cb24-73" aria-hidden="true" tabindex="-1"></a>        x_, attention <span class="op">=</span> <span class="va">self</span>.attn(<span class="va">self</span>.norm1(x), y, mask)</span>
+<span id="cb24-74"><a href="#cb24-74" aria-hidden="true" tabindex="-1"></a>        x <span class="op">=</span> x <span class="op">+</span> x_</span>
+<span id="cb24-75"><a href="#cb24-75" aria-hidden="true" tabindex="-1"></a>        x <span class="op">=</span> x <span class="op">+</span> <span class="va">self</span>.mlp(<span class="va">self</span>.norm2(x))</span>
+<span id="cb24-76"><a href="#cb24-76" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> x, attention</span>
+<span id="cb24-77"><a href="#cb24-77" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-78"><a href="#cb24-78" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> forward(<span class="va">self</span>, x, y<span class="op">=</span><span class="va">None</span>, mask<span class="op">=</span><span class="va">None</span>):</span>
+<span id="cb24-79"><a href="#cb24-79" aria-hidden="true" tabindex="-1"></a>        x <span class="op">=</span> x <span class="op">+</span> <span class="va">self</span>.attn(<span class="va">self</span>.norm1(x), y, mask)[<span class="dv">0</span>]</span>
+<span id="cb24-80"><a href="#cb24-80" aria-hidden="true" tabindex="-1"></a>        x <span class="op">=</span> x <span class="op">+</span> <span class="va">self</span>.mlp(<span class="va">self</span>.norm2(x))</span>
+<span id="cb24-81"><a href="#cb24-81" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> x</span>
+<span id="cb24-82"><a href="#cb24-82" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-83"><a href="#cb24-83" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, dim_self, dim_ref, num_heads, mlp_ratio<span class="op">=</span><span class="fl">4.</span>, bias<span class="op">=</span><span class="va">False</span>, dropout<span class="op">=</span><span class="fl">0.</span>, act<span class="op">=</span>nnf.relu,</span>
+<span id="cb24-84"><a href="#cb24-84" aria-hidden="true" tabindex="-1"></a>                 norm_layer: nn.Module <span class="op">=</span> nn.LayerNorm):</span>
+<span id="cb24-85"><a href="#cb24-85" aria-hidden="true" tabindex="-1"></a>        <span class="bu">super</span>().<span class="fu">__init__</span>()</span>
+<span id="cb24-86"><a href="#cb24-86" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.norm1 <span class="op">=</span> norm_layer(dim_self)</span>
+<span id="cb24-87"><a href="#cb24-87" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.attn <span class="op">=</span> MultiHeadAttention(dim_self, dim_ref, num_heads, bias<span class="op">=</span>bias, dropout<span class="op">=</span>dropout)</span>
+<span id="cb24-88"><a href="#cb24-88" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.norm2 <span class="op">=</span> norm_layer(dim_self)</span>
+<span id="cb24-89"><a href="#cb24-89" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.mlp <span class="op">=</span> MlpTransformer(dim_self, <span class="bu">int</span>(dim_self <span class="op">*</span> mlp_ratio), act<span class="op">=</span>act, dropout<span class="op">=</span>dropout)</span>
+<span id="cb24-90"><a href="#cb24-90" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-91"><a href="#cb24-91" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-92"><a href="#cb24-92" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Transformer(nn.Module):</span>
+<span id="cb24-93"><a href="#cb24-93" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-94"><a href="#cb24-94" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> forward_with_attention(<span class="va">self</span>, x, y<span class="op">=</span><span class="va">None</span>, mask<span class="op">=</span><span class="va">None</span>):</span>
+<span id="cb24-95"><a href="#cb24-95" aria-hidden="true" tabindex="-1"></a>        attentions <span class="op">=</span> []</span>
+<span id="cb24-96"><a href="#cb24-96" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> layer <span class="kw">in</span> <span class="va">self</span>.layers:</span>
+<span id="cb24-97"><a href="#cb24-97" aria-hidden="true" tabindex="-1"></a>            x, att <span class="op">=</span> layer.forward_with_attention(x, y, mask)</span>
+<span id="cb24-98"><a href="#cb24-98" aria-hidden="true" tabindex="-1"></a>            attentions.append(att)</span>
+<span id="cb24-99"><a href="#cb24-99" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> x, attentions</span>
+<span id="cb24-100"><a href="#cb24-100" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-101"><a href="#cb24-101" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> forward(<span class="va">self</span>, x, y<span class="op">=</span><span class="va">None</span>, mask<span class="op">=</span><span class="va">None</span>):</span>
+<span id="cb24-102"><a href="#cb24-102" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> i, layer <span class="kw">in</span> <span class="bu">enumerate</span>(<span class="va">self</span>.layers):</span>
+<span id="cb24-103"><a href="#cb24-103" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> i <span class="op">%</span> <span class="dv">2</span> <span class="op">==</span> <span class="dv">0</span> <span class="kw">and</span> <span class="va">self</span>.enc_dec: <span class="co"># cross</span></span>
+<span id="cb24-104"><a href="#cb24-104" aria-hidden="true" tabindex="-1"></a>                x <span class="op">=</span> layer(x, y)</span>
+<span id="cb24-105"><a href="#cb24-105" aria-hidden="true" tabindex="-1"></a>            <span class="cf">elif</span> <span class="va">self</span>.enc_dec:  <span class="co"># self</span></span>
+<span id="cb24-106"><a href="#cb24-106" aria-hidden="true" tabindex="-1"></a>                x <span class="op">=</span> layer(x, x, mask)</span>
+<span id="cb24-107"><a href="#cb24-107" aria-hidden="true" tabindex="-1"></a>            <span class="cf">else</span>:  <span class="co"># self or cross</span></span>
+<span id="cb24-108"><a href="#cb24-108" aria-hidden="true" tabindex="-1"></a>                x <span class="op">=</span> layer(x, y, mask)</span>
+<span id="cb24-109"><a href="#cb24-109" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> x</span>
+<span id="cb24-110"><a href="#cb24-110" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-111"><a href="#cb24-111" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, dim_self: <span class="bu">int</span>, num_heads: <span class="bu">int</span>, num_layers: <span class="bu">int</span>, dim_ref: Optional[<span class="bu">int</span>] <span class="op">=</span> <span class="va">None</span>,</span>
+<span id="cb24-112"><a href="#cb24-112" aria-hidden="true" tabindex="-1"></a>                 mlp_ratio: <span class="bu">float</span> <span class="op">=</span> <span class="fl">2.</span>, act<span class="op">=</span>nnf.relu, norm_layer: nn.Module <span class="op">=</span> nn.LayerNorm, enc_dec: <span class="bu">bool</span> <span class="op">=</span> <span class="va">False</span>):</span>
+<span id="cb24-113"><a href="#cb24-113" aria-hidden="true" tabindex="-1"></a>        <span class="bu">super</span>(Transformer, <span class="va">self</span>).<span class="fu">__init__</span>()</span>
+<span id="cb24-114"><a href="#cb24-114" aria-hidden="true" tabindex="-1"></a>        dim_ref <span class="op">=</span> dim_ref <span class="cf">if</span> dim_ref <span class="kw">is</span> <span class="kw">not</span> <span class="va">None</span> <span class="cf">else</span> dim_self</span>
+<span id="cb24-115"><a href="#cb24-115" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.enc_dec <span class="op">=</span> enc_dec</span>
+<span id="cb24-116"><a href="#cb24-116" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> enc_dec:</span>
+<span id="cb24-117"><a href="#cb24-117" aria-hidden="true" tabindex="-1"></a>            num_layers <span class="op">=</span> num_layers <span class="op">*</span> <span class="dv">2</span></span>
+<span id="cb24-118"><a href="#cb24-118" aria-hidden="true" tabindex="-1"></a>        layers <span class="op">=</span> []</span>
+<span id="cb24-119"><a href="#cb24-119" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(num_layers):</span>
+<span id="cb24-120"><a href="#cb24-120" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> i <span class="op">%</span> <span class="dv">2</span> <span class="op">==</span> <span class="dv">0</span> <span class="kw">and</span> enc_dec:  <span class="co"># cross</span></span>
+<span id="cb24-121"><a href="#cb24-121" aria-hidden="true" tabindex="-1"></a>                layers.append(TransformerLayer(dim_self, dim_ref, num_heads, mlp_ratio, act<span class="op">=</span>act, norm_layer<span class="op">=</span>norm_layer))</span>
+<span id="cb24-122"><a href="#cb24-122" aria-hidden="true" tabindex="-1"></a>            <span class="cf">elif</span> enc_dec:  <span class="co"># self</span></span>
+<span id="cb24-123"><a href="#cb24-123" aria-hidden="true" tabindex="-1"></a>                layers.append(TransformerLayer(dim_self, dim_self, num_heads, mlp_ratio, act<span class="op">=</span>act, norm_layer<span class="op">=</span>norm_layer))</span>
+<span id="cb24-124"><a href="#cb24-124" aria-hidden="true" tabindex="-1"></a>            <span class="cf">else</span>:  <span class="co"># self or cross</span></span>
+<span id="cb24-125"><a href="#cb24-125" aria-hidden="true" tabindex="-1"></a>                layers.append(TransformerLayer(dim_self, dim_ref, num_heads, mlp_ratio, act<span class="op">=</span>act, norm_layer<span class="op">=</span>norm_layer))</span>
+<span id="cb24-126"><a href="#cb24-126" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.layers <span class="op">=</span> nn.ModuleList(layers)</span>
+<span id="cb24-127"><a href="#cb24-127" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-128"><a href="#cb24-128" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-129"><a href="#cb24-129" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> TransformerMapper(nn.Module):</span>
+<span id="cb24-130"><a href="#cb24-130" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-131"><a href="#cb24-131" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> forward(<span class="va">self</span>, x):</span>
+<span id="cb24-132"><a href="#cb24-132" aria-hidden="true" tabindex="-1"></a>        x <span class="op">=</span> <span class="va">self</span>.linear(x).view(x.shape[<span class="dv">0</span>], <span class="va">self</span>.clip_length, <span class="op">-</span><span class="dv">1</span>)</span>
+<span id="cb24-133"><a href="#cb24-133" aria-hidden="true" tabindex="-1"></a>        prefix <span class="op">=</span> <span class="va">self</span>.prefix_const.unsqueeze(<span class="dv">0</span>).expand(x.shape[<span class="dv">0</span>], <span class="op">*</span><span class="va">self</span>.prefix_const.shape)</span>
+<span id="cb24-134"><a href="#cb24-134" aria-hidden="true" tabindex="-1"></a>        prefix <span class="op">=</span> torch.cat((x, prefix), dim<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb24-135"><a href="#cb24-135" aria-hidden="true" tabindex="-1"></a>        out <span class="op">=</span> <span class="va">self</span>.transformer(prefix)[:, <span class="va">self</span>.clip_length:]</span>
+<span id="cb24-136"><a href="#cb24-136" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> out</span>
+<span id="cb24-137"><a href="#cb24-137" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-138"><a href="#cb24-138" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, dim_clip: <span class="bu">int</span>, dim_embedding: <span class="bu">int</span>, prefix_length: <span class="bu">int</span>, clip_length: <span class="bu">int</span>, num_layers: <span class="bu">int</span> <span class="op">=</span> <span class="dv">8</span>):</span>
+<span id="cb24-139"><a href="#cb24-139" aria-hidden="true" tabindex="-1"></a>        <span class="bu">super</span>(TransformerMapper, <span class="va">self</span>).<span class="fu">__init__</span>()</span>
+<span id="cb24-140"><a href="#cb24-140" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.clip_length <span class="op">=</span> clip_length</span>
+<span id="cb24-141"><a href="#cb24-141" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.transformer <span class="op">=</span> Transformer(dim_embedding, <span class="dv">8</span>, num_layers)</span>
+<span id="cb24-142"><a href="#cb24-142" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.linear <span class="op">=</span> nn.Linear(dim_clip, clip_length <span class="op">*</span> dim_embedding)</span>
+<span id="cb24-143"><a href="#cb24-143" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.prefix_const <span class="op">=</span> nn.Parameter(torch.randn(prefix_length, dim_embedding), requires_grad<span class="op">=</span><span class="va">True</span>)</span></code></pre></div>
+</div>
+<section id="main-modules" class="cell markdown" id="gTLoIMsTrZOF">
+<h2>Main Modules</h2>
+</section>
+<div class="cell code" data-execution_count="14" id="wC79AV1xrbER">
+<div class="sourceCode" id="cb25"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> ClipCaptionModel(nn.Module):</span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> get_dummy_token(<span class="va">self</span>, batch_size: <span class="bu">int</span>, device: torch.device) <span class="op">-&gt;</span> torch.Tensor:</span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> torch.zeros(batch_size, <span class="va">self</span>.prefix_length, dtype<span class="op">=</span>torch.int64, device<span class="op">=</span>device)</span>
+<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-6"><a href="#cb25-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, prefix_length: <span class="bu">int</span>, clip_length: Optional[<span class="bu">int</span>] <span class="op">=</span> <span class="va">None</span>, prefix_size: <span class="bu">int</span> <span class="op">=</span> <span class="dv">512</span>,</span>
+<span id="cb25-7"><a href="#cb25-7" aria-hidden="true" tabindex="-1"></a>                 num_layers: <span class="bu">int</span> <span class="op">=</span> <span class="dv">8</span>, mapping_type: MappingType <span class="op">=</span> MappingType.MLP):</span>
+<span id="cb25-8"><a href="#cb25-8" aria-hidden="true" tabindex="-1"></a>        <span class="bu">super</span>(ClipCaptionModel, <span class="va">self</span>).<span class="fu">__init__</span>()</span>
+<span id="cb25-9"><a href="#cb25-9" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.prefix_length <span class="op">=</span> prefix_length</span>
+<span id="cb25-10"><a href="#cb25-10" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.gpt <span class="op">=</span> GPT2LMHeadModel.from_pretrained(<span class="st">&#39;gpt2&#39;</span>)</span>
+<span id="cb25-11"><a href="#cb25-11" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.gpt_embedding_size <span class="op">=</span> <span class="va">self</span>.gpt.transformer.wte.weight.shape[<span class="dv">1</span>]</span>
+<span id="cb25-12"><a href="#cb25-12" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> mapping_type <span class="op">==</span> MappingType.MLP:</span>
+<span id="cb25-13"><a href="#cb25-13" aria-hidden="true" tabindex="-1"></a>            <span class="va">self</span>.clip_project <span class="op">=</span> MLP((prefix_size, (<span class="va">self</span>.gpt_embedding_size <span class="op">*</span> prefix_length) <span class="op">//</span> <span class="dv">2</span>,</span>
+<span id="cb25-14"><a href="#cb25-14" aria-hidden="true" tabindex="-1"></a>                                     <span class="va">self</span>.gpt_embedding_size <span class="op">*</span> prefix_length))</span>
+<span id="cb25-15"><a href="#cb25-15" aria-hidden="true" tabindex="-1"></a>        <span class="cf">else</span>:</span>
+<span id="cb25-16"><a href="#cb25-16" aria-hidden="true" tabindex="-1"></a>            <span class="va">self</span>.clip_project <span class="op">=</span> TransformerMapper(prefix_size, <span class="va">self</span>.gpt_embedding_size, prefix_length,</span>
+<span id="cb25-17"><a href="#cb25-17" aria-hidden="true" tabindex="-1"></a>                                                                     clip_length, num_layers)</span>
+<span id="cb25-18"><a href="#cb25-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-19"><a href="#cb25-19" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> forward(<span class="va">self</span>, tokens: torch.Tensor, prefix: torch.Tensor, mask: Optional[torch.Tensor] <span class="op">=</span> <span class="va">None</span>,</span>
+<span id="cb25-20"><a href="#cb25-20" aria-hidden="true" tabindex="-1"></a>                labels: Optional[torch.Tensor] <span class="op">=</span> <span class="va">None</span>):</span>
+<span id="cb25-21"><a href="#cb25-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-22"><a href="#cb25-22" aria-hidden="true" tabindex="-1"></a>        <span class="co"># ==================================== Code ====================================</span></span>
+<span id="cb25-23"><a href="#cb25-23" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Projecting the prefix and reshaping to match GPT embedding size</span></span>
+<span id="cb25-24"><a href="#cb25-24" aria-hidden="true" tabindex="-1"></a>        projected_prefix <span class="op">=</span> <span class="va">self</span>.clip_project(prefix).view(<span class="va">self</span>.prefix_length, <span class="va">self</span>.gpt_embedding_size)</span>
+<span id="cb25-25"><a href="#cb25-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-26"><a href="#cb25-26" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Preparing embeddings with concatenated tokens and reshaped prefix</span></span>
+<span id="cb25-27"><a href="#cb25-27" aria-hidden="true" tabindex="-1"></a>        embeddings_with_prefix <span class="op">=</span> torch.cat([projected_prefix, <span class="va">self</span>.gpt.transformer.wte(tokens)], dim<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb25-28"><a href="#cb25-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-29"><a href="#cb25-29" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Formulating input for GPT model</span></span>
+<span id="cb25-30"><a href="#cb25-30" aria-hidden="true" tabindex="-1"></a>        input_labels <span class="op">=</span> torch.cat((<span class="va">self</span>.get_dummy_token(tokens.shape[<span class="dv">0</span>], tokens.device), tokens), dim<span class="op">=</span><span class="dv">1</span>) <span class="cf">if</span> labels <span class="cf">else</span> labels</span>
+<span id="cb25-31"><a href="#cb25-31" aria-hidden="true" tabindex="-1"></a>        out <span class="op">=</span> <span class="va">self</span>.gpt(inputs_embeds<span class="op">=</span>embeddings_with_prefix, attention_mask<span class="op">=</span>mask, labels<span class="op">=</span>input_labels)</span>
+<span id="cb25-32"><a href="#cb25-32" aria-hidden="true" tabindex="-1"></a>        <span class="co"># ==================================== Code ====================================</span></span>
+<span id="cb25-33"><a href="#cb25-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-34"><a href="#cb25-34" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> out</span>
+<span id="cb25-35"><a href="#cb25-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-36"><a href="#cb25-36" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> ClipCaptionPrefix(ClipCaptionModel):</span>
+<span id="cb25-37"><a href="#cb25-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-38"><a href="#cb25-38" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> parameters(<span class="va">self</span>, recurse: <span class="bu">bool</span> <span class="op">=</span> <span class="va">True</span>):</span>
+<span id="cb25-39"><a href="#cb25-39" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">self</span>.clip_project.parameters()</span>
+<span id="cb25-40"><a href="#cb25-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-41"><a href="#cb25-41" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> train(<span class="va">self</span>, mode: <span class="bu">bool</span> <span class="op">=</span> <span class="va">True</span>):</span>
+<span id="cb25-42"><a href="#cb25-42" aria-hidden="true" tabindex="-1"></a>        <span class="bu">super</span>(ClipCaptionPrefix, <span class="va">self</span>).train(mode)</span>
+<span id="cb25-43"><a href="#cb25-43" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.gpt.<span class="bu">eval</span>()</span>
+<span id="cb25-44"><a href="#cb25-44" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">self</span></span></code></pre></div>
+</div>
+<section id="caption-generation-functions" class="cell markdown"
+id="6Duui4591YJX">
+<h2>Caption Generation Functions</h2>
+</section>
+<div class="cell markdown" id="DiT7zqYJq3IE">
+<p>In this section, you are to implement two decoding strategies,
+specifically, both greedy and beam search. Your task involves completing
+the provided functions dedicated to these strategies.</p>
+</div>
+<div class="cell code" data-execution_count="15" id="HwAtiZQW1XIr">
+<div class="sourceCode" id="cb26"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> tqdm <span class="im">import</span> trange</span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> generate_beam(</span>
+<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a>        model,</span>
+<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a>        tokenizer,</span>
+<span id="cb26-6"><a href="#cb26-6" aria-hidden="true" tabindex="-1"></a>        prompt<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb26-7"><a href="#cb26-7" aria-hidden="true" tabindex="-1"></a>        embed<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb26-8"><a href="#cb26-8" aria-hidden="true" tabindex="-1"></a>        beam_size<span class="op">=</span><span class="dv">5</span>,</span>
+<span id="cb26-9"><a href="#cb26-9" aria-hidden="true" tabindex="-1"></a>        entry_length<span class="op">=</span><span class="dv">67</span>,  <span class="co"># maximum number of words</span></span>
+<span id="cb26-10"><a href="#cb26-10" aria-hidden="true" tabindex="-1"></a>        temperature<span class="op">=</span><span class="fl">1.</span>,</span>
+<span id="cb26-11"><a href="#cb26-11" aria-hidden="true" tabindex="-1"></a>        stop_token: <span class="bu">str</span> <span class="op">=</span> <span class="st">&#39;.&#39;</span>,</span>
+<span id="cb26-12"><a href="#cb26-12" aria-hidden="true" tabindex="-1"></a>):</span>
+<span id="cb26-13"><a href="#cb26-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-14"><a href="#cb26-14" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> get_device(model):</span>
+<span id="cb26-15"><a href="#cb26-15" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="bu">next</span>(model.parameters()).device</span>
+<span id="cb26-16"><a href="#cb26-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-17"><a href="#cb26-17" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> get_stop_token_index(tokenizer, stop_token):</span>
+<span id="cb26-18"><a href="#cb26-18" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> tokenizer.encode(stop_token)[<span class="dv">0</span>]</span>
+<span id="cb26-19"><a href="#cb26-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-20"><a href="#cb26-20" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> prepare_tokens(tokens, device, prompt):</span>
+<span id="cb26-21"><a href="#cb26-21" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> tokens <span class="kw">is</span> <span class="va">None</span>:</span>
+<span id="cb26-22"><a href="#cb26-22" aria-hidden="true" tabindex="-1"></a>            prompt <span class="op">=</span> <span class="st">&quot;&quot;</span> <span class="cf">if</span> prompt <span class="kw">is</span> <span class="va">None</span> <span class="cf">else</span> prompt  <span class="co"># Default prompt is an empty string</span></span>
+<span id="cb26-23"><a href="#cb26-23" aria-hidden="true" tabindex="-1"></a>            tokens <span class="op">=</span> torch.tensor(tokenizer.encode(prompt))</span>
+<span id="cb26-24"><a href="#cb26-24" aria-hidden="true" tabindex="-1"></a>            tokens <span class="op">=</span> tokens.unsqueeze(<span class="dv">0</span>).to(device)</span>
+<span id="cb26-25"><a href="#cb26-25" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> tokens</span>
+<span id="cb26-26"><a href="#cb26-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-27"><a href="#cb26-27" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> generate_embed(model, tokens, embed):</span>
+<span id="cb26-28"><a href="#cb26-28" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> embed <span class="kw">is</span> <span class="kw">not</span> <span class="va">None</span>:</span>
+<span id="cb26-29"><a href="#cb26-29" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> embed</span>
+<span id="cb26-30"><a href="#cb26-30" aria-hidden="true" tabindex="-1"></a>        <span class="cf">else</span>:</span>
+<span id="cb26-31"><a href="#cb26-31" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> model.gpt.transformer.wte(tokens)</span>
+<span id="cb26-32"><a href="#cb26-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-33"><a href="#cb26-33" aria-hidden="true" tabindex="-1"></a>    device <span class="op">=</span> get_device(model)</span>
+<span id="cb26-34"><a href="#cb26-34" aria-hidden="true" tabindex="-1"></a>    stop_token_index <span class="op">=</span> get_stop_token_index(tokenizer, stop_token)</span>
+<span id="cb26-35"><a href="#cb26-35" aria-hidden="true" tabindex="-1"></a>    seq_lengths <span class="op">=</span> torch.ones(beam_size, device<span class="op">=</span>device)</span>
+<span id="cb26-36"><a href="#cb26-36" aria-hidden="true" tabindex="-1"></a>    is_stopped <span class="op">=</span> torch.zeros(beam_size, device<span class="op">=</span>device, dtype<span class="op">=</span>torch.<span class="bu">bool</span>)</span>
+<span id="cb26-37"><a href="#cb26-37" aria-hidden="true" tabindex="-1"></a>    tokens <span class="op">=</span> <span class="va">None</span></span>
+<span id="cb26-38"><a href="#cb26-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-39"><a href="#cb26-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-40"><a href="#cb26-40" aria-hidden="true" tabindex="-1"></a>    <span class="cf">with</span> torch.no_grad():</span>
+<span id="cb26-41"><a href="#cb26-41" aria-hidden="true" tabindex="-1"></a>        tokens <span class="op">=</span> prepare_tokens(tokens, device, prompt)</span>
+<span id="cb26-42"><a href="#cb26-42" aria-hidden="true" tabindex="-1"></a>        generated <span class="op">=</span> generate_embed(model, tokens, embed)</span>
+<span id="cb26-43"><a href="#cb26-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-44"><a href="#cb26-44" aria-hidden="true" tabindex="-1"></a>        scores <span class="op">=</span> <span class="va">None</span></span>
+<span id="cb26-45"><a href="#cb26-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-46"><a href="#cb26-46" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> _ <span class="kw">in</span> <span class="bu">range</span>(entry_length):</span>
+<span id="cb26-47"><a href="#cb26-47" aria-hidden="true" tabindex="-1"></a>            outputs <span class="op">=</span> model.gpt(inputs_embeds<span class="op">=</span>generated)</span>
+<span id="cb26-48"><a href="#cb26-48" aria-hidden="true" tabindex="-1"></a>            logits <span class="op">=</span> outputs.logits</span>
+<span id="cb26-49"><a href="#cb26-49" aria-hidden="true" tabindex="-1"></a>            logits <span class="op">=</span> logits[:, <span class="op">-</span><span class="dv">1</span>, :] <span class="op">/</span> (temperature <span class="cf">if</span> temperature <span class="op">&gt;</span> <span class="dv">0</span> <span class="cf">else</span> <span class="fl">1.0</span>)</span>
+<span id="cb26-50"><a href="#cb26-50" aria-hidden="true" tabindex="-1"></a>            logits <span class="op">=</span> logits.softmax(<span class="op">-</span><span class="dv">1</span>).log()</span>
+<span id="cb26-51"><a href="#cb26-51" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-52"><a href="#cb26-52" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> scores <span class="kw">is</span> <span class="va">None</span>:</span>
+<span id="cb26-53"><a href="#cb26-53" aria-hidden="true" tabindex="-1"></a>                scores, next_tokens <span class="op">=</span> logits.topk(beam_size, <span class="op">-</span><span class="dv">1</span>)</span>
+<span id="cb26-54"><a href="#cb26-54" aria-hidden="true" tabindex="-1"></a>                generated <span class="op">=</span> generated.expand(beam_size, <span class="op">*</span>generated.shape[<span class="dv">1</span>:])</span>
+<span id="cb26-55"><a href="#cb26-55" aria-hidden="true" tabindex="-1"></a>                next_tokens, scores <span class="op">=</span> next_tokens.permute(<span class="dv">1</span>, <span class="dv">0</span>), scores.squeeze(<span class="dv">0</span>)</span>
+<span id="cb26-56"><a href="#cb26-56" aria-hidden="true" tabindex="-1"></a>                tokens <span class="op">=</span> tokens.expand(beam_size, <span class="op">*</span>tokens.shape[<span class="dv">1</span>:])</span>
+<span id="cb26-57"><a href="#cb26-57" aria-hidden="true" tabindex="-1"></a>                tokens <span class="op">=</span> torch.cat((tokens, next_tokens), dim<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb26-58"><a href="#cb26-58" aria-hidden="true" tabindex="-1"></a>            <span class="cf">else</span>:</span>
+<span id="cb26-59"><a href="#cb26-59" aria-hidden="true" tabindex="-1"></a>                logits[is_stopped] <span class="op">=</span> <span class="op">-</span><span class="bu">float</span>(<span class="st">&#39;inf&#39;</span>)  <span class="co"># Prevent stopped beams from updating</span></span>
+<span id="cb26-60"><a href="#cb26-60" aria-hidden="true" tabindex="-1"></a>                logits[is_stopped, <span class="dv">0</span>] <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb26-61"><a href="#cb26-61" aria-hidden="true" tabindex="-1"></a>                scores_sum <span class="op">=</span> scores[:, <span class="va">None</span>] <span class="op">+</span> logits</span>
+<span id="cb26-62"><a href="#cb26-62" aria-hidden="true" tabindex="-1"></a>                seq_lengths[<span class="op">~</span>is_stopped] <span class="op">+=</span> <span class="dv">1</span></span>
+<span id="cb26-63"><a href="#cb26-63" aria-hidden="true" tabindex="-1"></a>                scores_sum_average <span class="op">=</span> scores_sum <span class="op">/</span> seq_lengths[:, <span class="va">None</span>]</span>
+<span id="cb26-64"><a href="#cb26-64" aria-hidden="true" tabindex="-1"></a>                scores_sum_average, next_tokens <span class="op">=</span> scores_sum_average.view(<span class="op">-</span><span class="dv">1</span>).topk(beam_size, <span class="op">-</span><span class="dv">1</span>)</span>
+<span id="cb26-65"><a href="#cb26-65" aria-hidden="true" tabindex="-1"></a>                next_tokens_source <span class="op">=</span> next_tokens <span class="op">//</span> scores_sum.shape[<span class="dv">1</span>]</span>
+<span id="cb26-66"><a href="#cb26-66" aria-hidden="true" tabindex="-1"></a>                seq_lengths <span class="op">=</span> seq_lengths[next_tokens_source]</span>
+<span id="cb26-67"><a href="#cb26-67" aria-hidden="true" tabindex="-1"></a>                next_tokens <span class="op">=</span> next_tokens <span class="op">%</span> scores_sum.shape[<span class="dv">1</span>]</span>
+<span id="cb26-68"><a href="#cb26-68" aria-hidden="true" tabindex="-1"></a>                next_tokens <span class="op">=</span> next_tokens.unsqueeze(<span class="dv">1</span>)</span>
+<span id="cb26-69"><a href="#cb26-69" aria-hidden="true" tabindex="-1"></a>                tokens <span class="op">=</span> tokens[next_tokens_source]</span>
+<span id="cb26-70"><a href="#cb26-70" aria-hidden="true" tabindex="-1"></a>                tokens <span class="op">=</span> torch.cat((tokens, next_tokens), dim<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb26-71"><a href="#cb26-71" aria-hidden="true" tabindex="-1"></a>                generated <span class="op">=</span> generated[next_tokens_source]</span>
+<span id="cb26-72"><a href="#cb26-72" aria-hidden="true" tabindex="-1"></a>                scores <span class="op">=</span> scores_sum_average <span class="op">*</span> seq_lengths</span>
+<span id="cb26-73"><a href="#cb26-73" aria-hidden="true" tabindex="-1"></a>                is_stopped <span class="op">=</span> is_stopped[next_tokens_source]</span>
+<span id="cb26-74"><a href="#cb26-74" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-75"><a href="#cb26-75" aria-hidden="true" tabindex="-1"></a>            next_token_embed <span class="op">=</span> model.gpt.transformer.wte(next_tokens.squeeze()).view(generated.shape[<span class="dv">0</span>], <span class="dv">1</span>, <span class="op">-</span><span class="dv">1</span>)</span>
+<span id="cb26-76"><a href="#cb26-76" aria-hidden="true" tabindex="-1"></a>            generated <span class="op">=</span> torch.cat((generated, next_token_embed), dim<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb26-77"><a href="#cb26-77" aria-hidden="true" tabindex="-1"></a>            is_stopped <span class="op">=</span> is_stopped <span class="op">+</span> next_tokens.eq(stop_token_index).squeeze()</span>
+<span id="cb26-78"><a href="#cb26-78" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-79"><a href="#cb26-79" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> is_stopped.<span class="bu">all</span>():</span>
+<span id="cb26-80"><a href="#cb26-80" aria-hidden="true" tabindex="-1"></a>                <span class="cf">break</span></span>
+<span id="cb26-81"><a href="#cb26-81" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-82"><a href="#cb26-82" aria-hidden="true" tabindex="-1"></a>        scores <span class="op">=</span> scores <span class="op">/</span> seq_lengths</span>
+<span id="cb26-83"><a href="#cb26-83" aria-hidden="true" tabindex="-1"></a>        output_list <span class="op">=</span> tokens.cpu().numpy()</span>
+<span id="cb26-84"><a href="#cb26-84" aria-hidden="true" tabindex="-1"></a>        output_texts <span class="op">=</span> [tokenizer.decode(output[:<span class="bu">int</span>(length)]) <span class="cf">for</span> output, length <span class="kw">in</span> <span class="bu">zip</span>(output_list, seq_lengths)]</span>
+<span id="cb26-85"><a href="#cb26-85" aria-hidden="true" tabindex="-1"></a>        order <span class="op">=</span> scores.argsort(descending<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb26-86"><a href="#cb26-86" aria-hidden="true" tabindex="-1"></a>        output_texts <span class="op">=</span> [output_texts[i] <span class="cf">for</span> i <span class="kw">in</span> order]</span>
+<span id="cb26-87"><a href="#cb26-87" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-88"><a href="#cb26-88" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> output_texts</span>
+<span id="cb26-89"><a href="#cb26-89" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-90"><a href="#cb26-90" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-91"><a href="#cb26-91" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-92"><a href="#cb26-92" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> generate_simple(</span>
+<span id="cb26-93"><a href="#cb26-93" aria-hidden="true" tabindex="-1"></a>        model,</span>
+<span id="cb26-94"><a href="#cb26-94" aria-hidden="true" tabindex="-1"></a>        tokenizer,</span>
+<span id="cb26-95"><a href="#cb26-95" aria-hidden="true" tabindex="-1"></a>        tokens<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb26-96"><a href="#cb26-96" aria-hidden="true" tabindex="-1"></a>        prompt<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb26-97"><a href="#cb26-97" aria-hidden="true" tabindex="-1"></a>        embed<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb26-98"><a href="#cb26-98" aria-hidden="true" tabindex="-1"></a>        entry_count<span class="op">=</span><span class="dv">1</span>,</span>
+<span id="cb26-99"><a href="#cb26-99" aria-hidden="true" tabindex="-1"></a>        entry_length<span class="op">=</span><span class="dv">67</span>,  <span class="co"># maximum number of words</span></span>
+<span id="cb26-100"><a href="#cb26-100" aria-hidden="true" tabindex="-1"></a>        top_p<span class="op">=</span><span class="fl">0.8</span>,</span>
+<span id="cb26-101"><a href="#cb26-101" aria-hidden="true" tabindex="-1"></a>        temperature<span class="op">=</span><span class="fl">1.</span>,</span>
+<span id="cb26-102"><a href="#cb26-102" aria-hidden="true" tabindex="-1"></a>        stop_token: <span class="bu">str</span> <span class="op">=</span> <span class="st">&#39;.&#39;</span>,</span>
+<span id="cb26-103"><a href="#cb26-103" aria-hidden="true" tabindex="-1"></a>):</span>
+<span id="cb26-104"><a href="#cb26-104" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-105"><a href="#cb26-105" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> get_device(model):</span>
+<span id="cb26-106"><a href="#cb26-106" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="bu">next</span>(model.parameters()).device</span>
+<span id="cb26-107"><a href="#cb26-107" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-108"><a href="#cb26-108" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> get_stop_token_index(tokenizer, stop_token):</span>
+<span id="cb26-109"><a href="#cb26-109" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> tokenizer.encode(stop_token)[<span class="dv">0</span>]</span>
+<span id="cb26-110"><a href="#cb26-110" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-111"><a href="#cb26-111" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> prepare_tokens(tokens, device):</span>
+<span id="cb26-112"><a href="#cb26-112" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> tokens <span class="kw">is</span> <span class="va">None</span>:</span>
+<span id="cb26-113"><a href="#cb26-113" aria-hidden="true" tabindex="-1"></a>            prompt <span class="op">=</span> <span class="st">&quot;&quot;</span>  <span class="co"># Default prompt is an empty string</span></span>
+<span id="cb26-114"><a href="#cb26-114" aria-hidden="true" tabindex="-1"></a>            tokens <span class="op">=</span> torch.tensor(tokenizer.encode(prompt))</span>
+<span id="cb26-115"><a href="#cb26-115" aria-hidden="true" tabindex="-1"></a>            tokens <span class="op">=</span> tokens.unsqueeze(<span class="dv">0</span>).to(device)</span>
+<span id="cb26-116"><a href="#cb26-116" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> tokens</span>
+<span id="cb26-117"><a href="#cb26-117" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-118"><a href="#cb26-118" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> generate_embed(model, tokens, embed):</span>
+<span id="cb26-119"><a href="#cb26-119" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> embed <span class="kw">is</span> <span class="kw">not</span> <span class="va">None</span>:</span>
+<span id="cb26-120"><a href="#cb26-120" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> embed</span>
+<span id="cb26-121"><a href="#cb26-121" aria-hidden="true" tabindex="-1"></a>        <span class="cf">else</span>:</span>
+<span id="cb26-122"><a href="#cb26-122" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> model.gpt.transformer.wte(tokens)</span>
+<span id="cb26-123"><a href="#cb26-123" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-124"><a href="#cb26-124" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> apply_top_p_filtering(logits, sorted_indices, sorted_logits):</span>
+<span id="cb26-125"><a href="#cb26-125" aria-hidden="true" tabindex="-1"></a>        cumulative_probs <span class="op">=</span> torch.cumsum(nnf.softmax(sorted_logits, dim<span class="op">=-</span><span class="dv">1</span>), dim<span class="op">=-</span><span class="dv">1</span>)</span>
+<span id="cb26-126"><a href="#cb26-126" aria-hidden="true" tabindex="-1"></a>        sorted_indices_to_remove <span class="op">=</span> cumulative_probs <span class="op">&gt;</span> top_p</span>
+<span id="cb26-127"><a href="#cb26-127" aria-hidden="true" tabindex="-1"></a>        sorted_indices_to_remove[..., <span class="dv">1</span>:] <span class="op">=</span> sorted_indices_to_remove[..., :<span class="op">-</span><span class="dv">1</span>].clone()</span>
+<span id="cb26-128"><a href="#cb26-128" aria-hidden="true" tabindex="-1"></a>        sorted_indices_to_remove[..., <span class="dv">0</span>] <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb26-129"><a href="#cb26-129" aria-hidden="true" tabindex="-1"></a>        indices_to_remove <span class="op">=</span> sorted_indices[sorted_indices_to_remove]</span>
+<span id="cb26-130"><a href="#cb26-130" aria-hidden="true" tabindex="-1"></a>        logits[:, indices_to_remove] <span class="op">=</span> <span class="op">-</span><span class="bu">float</span>(<span class="st">&quot;Inf&quot;</span>)</span>
+<span id="cb26-131"><a href="#cb26-131" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> logits</span>
+<span id="cb26-132"><a href="#cb26-132" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-133"><a href="#cb26-133" aria-hidden="true" tabindex="-1"></a>    device <span class="op">=</span> get_device(model)</span>
+<span id="cb26-134"><a href="#cb26-134" aria-hidden="true" tabindex="-1"></a>    stop_token_index <span class="op">=</span> get_stop_token_index(tokenizer, stop_token)</span>
+<span id="cb26-135"><a href="#cb26-135" aria-hidden="true" tabindex="-1"></a>    generated_list <span class="op">=</span> []</span>
+<span id="cb26-136"><a href="#cb26-136" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-137"><a href="#cb26-137" aria-hidden="true" tabindex="-1"></a>    <span class="cf">with</span> torch.no_grad():</span>
+<span id="cb26-138"><a href="#cb26-138" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> _ <span class="kw">in</span> trange(entry_count):</span>
+<span id="cb26-139"><a href="#cb26-139" aria-hidden="true" tabindex="-1"></a>            tokens <span class="op">=</span> prepare_tokens(tokens, device)</span>
+<span id="cb26-140"><a href="#cb26-140" aria-hidden="true" tabindex="-1"></a>            generated <span class="op">=</span> generate_embed(model, tokens, embed)</span>
+<span id="cb26-141"><a href="#cb26-141" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-142"><a href="#cb26-142" aria-hidden="true" tabindex="-1"></a>            <span class="cf">for</span> _ <span class="kw">in</span> <span class="bu">range</span>(entry_length):</span>
+<span id="cb26-143"><a href="#cb26-143" aria-hidden="true" tabindex="-1"></a>                outputs <span class="op">=</span> model.gpt(inputs_embeds<span class="op">=</span>generated)</span>
+<span id="cb26-144"><a href="#cb26-144" aria-hidden="true" tabindex="-1"></a>                logits <span class="op">=</span> outputs.logits</span>
+<span id="cb26-145"><a href="#cb26-145" aria-hidden="true" tabindex="-1"></a>                logits <span class="op">=</span> logits[:, <span class="op">-</span><span class="dv">1</span>, :] <span class="op">/</span> (temperature <span class="cf">if</span> temperature <span class="op">&gt;</span> <span class="dv">0</span> <span class="cf">else</span> <span class="fl">1.0</span>)</span>
+<span id="cb26-146"><a href="#cb26-146" aria-hidden="true" tabindex="-1"></a>                sorted_logits, sorted_indices <span class="op">=</span> torch.sort(logits, descending<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb26-147"><a href="#cb26-147" aria-hidden="true" tabindex="-1"></a>                logits <span class="op">=</span> apply_top_p_filtering(logits, sorted_indices, sorted_logits)</span>
+<span id="cb26-148"><a href="#cb26-148" aria-hidden="true" tabindex="-1"></a>                next_token <span class="op">=</span> torch.argmax(logits, <span class="op">-</span><span class="dv">1</span>).unsqueeze(<span class="dv">0</span>)</span>
+<span id="cb26-149"><a href="#cb26-149" aria-hidden="true" tabindex="-1"></a>                next_token_embed <span class="op">=</span> model.gpt.transformer.wte(next_token)</span>
+<span id="cb26-150"><a href="#cb26-150" aria-hidden="true" tabindex="-1"></a>                tokens <span class="op">=</span> torch.cat((tokens, next_token), dim<span class="op">=</span><span class="dv">1</span>) <span class="cf">if</span> tokens <span class="kw">is</span> <span class="kw">not</span> <span class="va">None</span> <span class="cf">else</span> next_token</span>
+<span id="cb26-151"><a href="#cb26-151" aria-hidden="true" tabindex="-1"></a>                generated <span class="op">=</span> torch.cat((generated, next_token_embed), dim<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb26-152"><a href="#cb26-152" aria-hidden="true" tabindex="-1"></a>                <span class="cf">if</span> stop_token_index <span class="op">==</span> next_token.item():</span>
+<span id="cb26-153"><a href="#cb26-153" aria-hidden="true" tabindex="-1"></a>                    <span class="cf">break</span></span>
+<span id="cb26-154"><a href="#cb26-154" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-155"><a href="#cb26-155" aria-hidden="true" tabindex="-1"></a>            output_list <span class="op">=</span> <span class="bu">list</span>(tokens.squeeze().cpu().numpy())</span>
+<span id="cb26-156"><a href="#cb26-156" aria-hidden="true" tabindex="-1"></a>            output_text <span class="op">=</span> tokenizer.decode(output_list)</span>
+<span id="cb26-157"><a href="#cb26-157" aria-hidden="true" tabindex="-1"></a>            generated_list.append(output_text)</span>
+<span id="cb26-158"><a href="#cb26-158" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-159"><a href="#cb26-159" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> generated_list[<span class="dv">0</span>]</span></code></pre></div>
+</div>
+<section id="generate" class="cell markdown" id="k6kUPXe-3cnd">
+<h2>Generate</h2>
+</section>
+<div class="cell code" data-execution_count="16"
+data-colab="{&quot;base_uri&quot;:&quot;https://localhost:8080/&quot;,&quot;height&quot;:162,&quot;referenced_widgets&quot;:[&quot;29872fbb9a58413b9b750541297d4135&quot;,&quot;79722f012a224c4baf179f1efdf2fa0f&quot;,&quot;e834a8cedeed485fbb2f3e0aee7ac317&quot;,&quot;9bd26f9589a24ea1a375c05f554a9376&quot;,&quot;77a572e4e2154540824f2f9941dfb364&quot;,&quot;08934c757cae4ef6b06ce2c5dd00e678&quot;,&quot;3ba79d010e55422e9b096d033b8d859e&quot;,&quot;74048c5cd9924d1ab6e94b78b6880ddb&quot;,&quot;1d037957734145a7a6e6c4e862b359f4&quot;,&quot;52a39c847d1644f081b6512bd1266b8b&quot;,&quot;6c75b8c29daf4dfcb7a425448624cdcd&quot;,&quot;f6a886c50fbd4da58d144c1e63586112&quot;,&quot;20e741c92082492293738a9a79634abb&quot;,&quot;0723b99ef4164105963334b2d4e93f8d&quot;,&quot;3cfc4cf2348d400294bbb9cfb8024d1b&quot;,&quot;efb6ae4c6141444fa69a84949c584055&quot;,&quot;1876b0d6a130473db233dbad4dabe292&quot;,&quot;d1c422705d7b4cf5bcd47f977ddb7351&quot;,&quot;620c7a39548a4afd87e345d99663e1ef&quot;,&quot;eefde3aba3824f1f92462a2d8c28f893&quot;,&quot;b449fb64ffc74712885ea7d95bfd6cd4&quot;,&quot;bbab1cc8e15c4302a6501ba21695b718&quot;,&quot;469e0e294f4c40e3ae7e8dbc761143a4&quot;,&quot;efe03f4cd4214ba097c3384aa83f781b&quot;,&quot;134486be5bd64610a37e1b49bba87bbc&quot;,&quot;9a5f85c57dbe435cb057476230e46cd7&quot;,&quot;50b6b94e4106400297be6b4b597b9856&quot;,&quot;6a18c7eeb352476b98352033d992e3d6&quot;,&quot;7970964d51a7424da1380690717b0f39&quot;,&quot;bd1e2fe066c74097b4e6d9b03b62ce21&quot;,&quot;0fbf57888eba44058644e965d53b3463&quot;,&quot;b26a6e41d4814c9da9ad64a99f66c536&quot;,&quot;cbb4c41dfca647e4a63d814a8c573bd8&quot;,&quot;7dfd52a099164ed8a08514f8ecad054e&quot;,&quot;4fedb2d5bf6542f081ea899e20c96e3a&quot;,&quot;f0c2fc8dfa1f4a939412a7e16f806a77&quot;,&quot;7e94a685214d46968659b8f1722ab473&quot;,&quot;4dffbfe19d414c78b68ffc726c5a4d65&quot;,&quot;d978b7ef8fe942a097e73da3282db7bb&quot;,&quot;b7cfb82e1a884e5d8a5cd20e133aa4da&quot;,&quot;dd958a9189714999ae1bf8a039083c1f&quot;,&quot;3b71d3da6b734b04bc71ab4b49080970&quot;,&quot;b61cdd343d7d42249653d73def08e99c&quot;,&quot;b7a54c56d80e40e3903935ea3c9b6457&quot;]}"
+id="RJ-z8e0V3hFR" data-outputId="894776ab-ca28-42a4-b52e-bed81f88481f">
+<div class="sourceCode" id="cb27"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>pretrained_model <span class="op">=</span> <span class="st">&#39;COCO&#39;</span></span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>model_path <span class="op">=</span> <span class="st">&#39;./model_wieghts.pt&#39;</span></span>
+<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a>current_directory <span class="op">=</span> os.getcwd()</span>
+<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-5"><a href="#cb27-5" aria-hidden="true" tabindex="-1"></a>downloader.download_file(<span class="st">&quot;1GYPToCqFREwi285wPLhuVExlz7DDUDfJ&quot;</span>, model_path)</span>
+<span id="cb27-6"><a href="#cb27-6" aria-hidden="true" tabindex="-1"></a>is_gpu <span class="op">=</span> <span class="va">False</span></span>
+<span id="cb27-7"><a href="#cb27-7" aria-hidden="true" tabindex="-1"></a>device <span class="op">=</span> <span class="st">&#39;cuda:0&#39;</span> <span class="cf">if</span> is_gpu <span class="cf">else</span> <span class="st">&quot;cpu&quot;</span></span>
+<span id="cb27-8"><a href="#cb27-8" aria-hidden="true" tabindex="-1"></a>clip_model, preprocess <span class="op">=</span> clip.load(<span class="st">&quot;RN50x4&quot;</span>, device<span class="op">=</span>device, jit<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb27-9"><a href="#cb27-9" aria-hidden="true" tabindex="-1"></a>tokenizer <span class="op">=</span> GPT2Tokenizer.from_pretrained(<span class="st">&quot;gpt2&quot;</span>)</span></code></pre></div>
+<div class="output stream stderr">
+<pre><code>100%|███████████████████████████████████████| 402M/402M [01:15&lt;00:00, 5.57MiB/s]
+</code></pre>
+</div>
+<div class="output display_data">
+<div class="sourceCode" id="cb29"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span><span class="dt">&quot;model_id&quot;</span><span class="fu">:</span><span class="st">&quot;29872fbb9a58413b9b750541297d4135&quot;</span><span class="fu">,</span><span class="dt">&quot;version_major&quot;</span><span class="fu">:</span><span class="dv">2</span><span class="fu">,</span><span class="dt">&quot;version_minor&quot;</span><span class="fu">:</span><span class="dv">0</span><span class="fu">}</span></span></code></pre></div>
+</div>
+<div class="output display_data">
+<div class="sourceCode" id="cb30"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span><span class="dt">&quot;model_id&quot;</span><span class="fu">:</span><span class="st">&quot;f6a886c50fbd4da58d144c1e63586112&quot;</span><span class="fu">,</span><span class="dt">&quot;version_major&quot;</span><span class="fu">:</span><span class="dv">2</span><span class="fu">,</span><span class="dt">&quot;version_minor&quot;</span><span class="fu">:</span><span class="dv">0</span><span class="fu">}</span></span></code></pre></div>
+</div>
+<div class="output display_data">
+<div class="sourceCode" id="cb31"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span><span class="dt">&quot;model_id&quot;</span><span class="fu">:</span><span class="st">&quot;469e0e294f4c40e3ae7e8dbc761143a4&quot;</span><span class="fu">,</span><span class="dt">&quot;version_major&quot;</span><span class="fu">:</span><span class="dv">2</span><span class="fu">,</span><span class="dt">&quot;version_minor&quot;</span><span class="fu">:</span><span class="dv">0</span><span class="fu">}</span></span></code></pre></div>
+</div>
+<div class="output display_data">
+<div class="sourceCode" id="cb32"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span><span class="dt">&quot;model_id&quot;</span><span class="fu">:</span><span class="st">&quot;7dfd52a099164ed8a08514f8ecad054e&quot;</span><span class="fu">,</span><span class="dt">&quot;version_major&quot;</span><span class="fu">:</span><span class="dv">2</span><span class="fu">,</span><span class="dt">&quot;version_minor&quot;</span><span class="fu">:</span><span class="dv">0</span><span class="fu">}</span></span></code></pre></div>
+</div>
+</div>
+<div class="cell code" data-execution_count="17"
+data-colab="{&quot;base_uri&quot;:&quot;https://localhost:8080/&quot;,&quot;height&quot;:81,&quot;referenced_widgets&quot;:[&quot;51f41930f133453cbae77ca35646e912&quot;,&quot;34b05790bd814aea83e117be5dbb92d0&quot;,&quot;a5301e82763145a5b4bec9deba4854ca&quot;,&quot;89eba2b3b2104c89bd2468fb4b0760f6&quot;,&quot;08cd70a9e9694ae0972066ce80473a73&quot;,&quot;661a5df823ad48fcaa5759c1d621d1ad&quot;,&quot;7de15be7615e4571bff5351c4abb7fdf&quot;,&quot;2f661d99523243509994d7e76e07240f&quot;,&quot;020c9256d7d24883ab4fab2b0f97f318&quot;,&quot;ecae70b17a8f4a27a9c7b3ffda825340&quot;,&quot;5a249b5ad82741e9b8c0a8305716c963&quot;,&quot;acf6f0da4ecf4ec3a690c41e0530adb8&quot;,&quot;661e0e96bfaa4c579b3b7ec23b2e58fa&quot;,&quot;b4b623eacddb41379a8d71a1fb1f62e4&quot;,&quot;5ae34acf40354c4c8030419c97b92cfe&quot;,&quot;d879777a6cc44bfcbfc841c8c230f53f&quot;,&quot;20faf57f1d574c69812e33534f09106e&quot;,&quot;9e322618e10541aca44b07c924e85b15&quot;,&quot;b01a1a85f61a4db8bb024094bdccc22f&quot;,&quot;5614053339b346e1873a4171c63a3ddf&quot;,&quot;a06b10a233ce42c5ac3aa6f200fdb060&quot;,&quot;e7e9cee39dfb49dead6b2082e846d505&quot;]}"
+id="QC-a_MCL7WG0" data-outputId="6cd29513-e49c-4562-9e93-867bf5662392">
+<div class="sourceCode" id="cb33"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>prefix_length <span class="op">=</span> <span class="dv">40</span></span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> ClipCaptionPrefix(prefix_length, clip_length<span class="op">=</span><span class="dv">40</span>, prefix_size<span class="op">=</span><span class="dv">640</span>, num_layers<span class="op">=</span><span class="dv">8</span>, mapping_type<span class="op">=</span><span class="st">&#39;transformer&#39;</span>)</span>
+<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a>model.load_state_dict(torch.load(model_path, map_location<span class="op">=</span><span class="st">&#39;cpu&#39;</span>), strict<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> model.<span class="bu">eval</span>()</span>
+<span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> model.to(device)</span></code></pre></div>
+<div class="output display_data">
+<div class="sourceCode" id="cb34"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span><span class="dt">&quot;model_id&quot;</span><span class="fu">:</span><span class="st">&quot;51f41930f133453cbae77ca35646e912&quot;</span><span class="fu">,</span><span class="dt">&quot;version_major&quot;</span><span class="fu">:</span><span class="dv">2</span><span class="fu">,</span><span class="dt">&quot;version_minor&quot;</span><span class="fu">:</span><span class="dv">0</span><span class="fu">}</span></span></code></pre></div>
+</div>
+<div class="output display_data">
+<div class="sourceCode" id="cb35"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span><span class="dt">&quot;model_id&quot;</span><span class="fu">:</span><span class="st">&quot;acf6f0da4ecf4ec3a690c41e0530adb8&quot;</span><span class="fu">,</span><span class="dt">&quot;version_major&quot;</span><span class="fu">:</span><span class="dv">2</span><span class="fu">,</span><span class="dt">&quot;version_minor&quot;</span><span class="fu">:</span><span class="dv">0</span><span class="fu">}</span></span></code></pre></div>
+</div>
+</div>
+<div class="cell code" data-execution_count="18" id="rmv9HdQsCpNQ">
+<div class="sourceCode" id="cb36"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> locale</span>
+<span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a>locale.getpreferredencoding <span class="op">=</span> <span class="kw">lambda</span>: <span class="st">&quot;UTF-8&quot;</span></span></code></pre></div>
+</div>
+<div class="cell code" data-execution_count="19"
+data-colab="{&quot;base_uri&quot;:&quot;https://localhost:8080/&quot;}"
+id="7sOtrLbbHc6P" data-outputId="a3c3fcc8-b7c7-4975-be17-c547c896f4da">
+<div class="sourceCode" id="cb37"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a><span class="co"># [&#39;562207&#39;, &#39;579664&#39;, &#39;060623&#39;, &#39;165547&#39;, &#39;334321&#39;, &#39;483108&#39;, &#39;386164&#39;, &#39;354533&#39;]</span></span>
+<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a>IMAGE_NAME <span class="op">=</span> <span class="st">&#39;334321&#39;</span></span>
+<span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb37-4"><a href="#cb37-4" aria-hidden="true" tabindex="-1"></a>name_ <span class="op">=</span> <span class="st">&quot;COCO_val2014_000000&quot;</span> <span class="op">+</span> IMAGE_NAME <span class="op">+</span> <span class="st">&quot;.jpg&quot;</span></span>
+<span id="cb37-5"><a href="#cb37-5" aria-hidden="true" tabindex="-1"></a>images_path <span class="op">=</span> os.path.join(os.path.dirname(current_directory), <span class="st">&quot;images&quot;</span>)</span>
+<span id="cb37-6"><a href="#cb37-6" aria-hidden="true" tabindex="-1"></a>os.makedirs(images_path, exist_ok<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb37-7"><a href="#cb37-7" aria-hidden="true" tabindex="-1"></a>UPLOADED_FILE <span class="op">=</span> os.path.join(images_path, name_)</span>
+<span id="cb37-8"><a href="#cb37-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb37-9"><a href="#cb37-9" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> os.path.isfile(UPLOADED_FILE):</span>
+<span id="cb37-10"><a href="#cb37-10" aria-hidden="true" tabindex="-1"></a>  download_path <span class="op">=</span> os.path.join(images_path, <span class="st">&quot;images.zip&quot;</span>)</span>
+<span id="cb37-11"><a href="#cb37-11" aria-hidden="true" tabindex="-1"></a>  downloader.download_file(<span class="st">&quot;1l6J9WFYxpF-1HFr3A5Oq1eoObTxzbPgs&quot;</span>, download_path)</span>
+<span id="cb37-12"><a href="#cb37-12" aria-hidden="true" tabindex="-1"></a>  <span class="op">!</span>unzip {download_path} <span class="op">-</span>d {images_path}</span></code></pre></div>
+<div class="output stream stdout">
+<pre><code>Archive:  /images/images.zip
+  inflating: /images/COCO_val2014_000000060623.jpg  
+  inflating: /images/__MACOSX/._COCO_val2014_000000060623.jpg  
+  inflating: /images/COCO_val2014_000000165547.jpg  
+  inflating: /images/__MACOSX/._COCO_val2014_000000165547.jpg  
+  inflating: /images/COCO_val2014_000000334321.jpg  
+  inflating: /images/__MACOSX/._COCO_val2014_000000334321.jpg  
+  inflating: /images/COCO_val2014_000000354533.jpg  
+  inflating: /images/__MACOSX/._COCO_val2014_000000354533.jpg  
+  inflating: /images/COCO_val2014_000000386164.jpg  
+  inflating: /images/__MACOSX/._COCO_val2014_000000386164.jpg  
+  inflating: /images/COCO_val2014_000000483108.jpg  
+  inflating: /images/__MACOSX/._COCO_val2014_000000483108.jpg  
+  inflating: /images/COCO_val2014_000000562207.jpg  
+  inflating: /images/__MACOSX/._COCO_val2014_000000562207.jpg  
+  inflating: /images/COCO_val2014_000000579664.jpg  
+  inflating: /images/__MACOSX/._COCO_val2014_000000579664.jpg  
+</code></pre>
+</div>
+</div>
+<div class="cell markdown" id="YnbnSsL5sJgV">
+<p>In the next cell use the ClipCap model to generate captions for the
+image.</p>
+</div>
+<div class="cell code" data-execution_count="20"
+data-colab="{&quot;base_uri&quot;:&quot;https://localhost:8080/&quot;,&quot;height&quot;:394}"
+id="MLsffURbIp6n" data-outputId="4b2b6838-8b0d-4873-8584-e0fcf53afeaa">
+<div class="sourceCode" id="cb39"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a>use_beam_search <span class="op">=</span> <span class="va">True</span></span>
+<span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a>image <span class="op">=</span> io.imread(UPLOADED_FILE)</span>
+<span id="cb39-3"><a href="#cb39-3" aria-hidden="true" tabindex="-1"></a>pil_image <span class="op">=</span> PIL.Image.fromarray(image)</span>
+<span id="cb39-4"><a href="#cb39-4" aria-hidden="true" tabindex="-1"></a>display(pil_image)</span>
+<span id="cb39-5"><a href="#cb39-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb39-6"><a href="#cb39-6" aria-hidden="true" tabindex="-1"></a><span class="co"># ==================================== Code (Begin) ====================================</span></span>
+<span id="cb39-7"><a href="#cb39-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb39-8"><a href="#cb39-8" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> generate_cap(pil_image):</span>
+<span id="cb39-9"><a href="#cb39-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb39-10"><a href="#cb39-10" aria-hidden="true" tabindex="-1"></a>    image_tensor <span class="op">=</span> preprocess(pil_image)</span>
+<span id="cb39-11"><a href="#cb39-11" aria-hidden="true" tabindex="-1"></a>    image_tensor <span class="op">=</span> image_tensor.unsqueeze(<span class="dv">0</span>)</span>
+<span id="cb39-12"><a href="#cb39-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb39-13"><a href="#cb39-13" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Move tensor to the same device as the model</span></span>
+<span id="cb39-14"><a href="#cb39-14" aria-hidden="true" tabindex="-1"></a>    image_tensor <span class="op">=</span> image_tensor.to(device)</span>
+<span id="cb39-15"><a href="#cb39-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb39-16"><a href="#cb39-16" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Generate image features</span></span>
+<span id="cb39-17"><a href="#cb39-17" aria-hidden="true" tabindex="-1"></a>    <span class="cf">with</span> torch.no_grad():</span>
+<span id="cb39-18"><a href="#cb39-18" aria-hidden="true" tabindex="-1"></a>        image_features <span class="op">=</span> clip_model.encode_image(image_tensor).to(device)</span>
+<span id="cb39-19"><a href="#cb39-19" aria-hidden="true" tabindex="-1"></a>        image_features_embed <span class="op">=</span> model.clip_project(image_features).reshape(<span class="dv">1</span>, prefix_length, <span class="op">-</span><span class="dv">1</span>)</span>
+<span id="cb39-20"><a href="#cb39-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb39-21"><a href="#cb39-21" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Generate captions</span></span>
+<span id="cb39-22"><a href="#cb39-22" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> use_beam_search:</span>
+<span id="cb39-23"><a href="#cb39-23" aria-hidden="true" tabindex="-1"></a>        caption <span class="op">=</span> generate_beam(model, tokenizer, embed<span class="op">=</span>image_features_embed)[<span class="dv">0</span>]</span>
+<span id="cb39-24"><a href="#cb39-24" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>:</span>
+<span id="cb39-25"><a href="#cb39-25" aria-hidden="true" tabindex="-1"></a>        caption <span class="op">=</span> generate_simple(model, tokenizer, embed<span class="op">=</span>image_features_embed)</span>
+<span id="cb39-26"><a href="#cb39-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb39-27"><a href="#cb39-27" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> caption</span>
+<span id="cb39-28"><a href="#cb39-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb39-29"><a href="#cb39-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb39-30"><a href="#cb39-30" aria-hidden="true" tabindex="-1"></a><span class="co"># Decode the captions</span></span>
+<span id="cb39-31"><a href="#cb39-31" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(generate_cap(pil_image))</span>
+<span id="cb39-32"><a href="#cb39-32" aria-hidden="true" tabindex="-1"></a><span class="co"># ==================================== Code (End) ====================================</span></span></code></pre></div>
+<div class="output display_data">
+<p><img src="8d8687ec3dae82c374dde48df7171d9d44e8dacb.png" /></p>
+</div>
+<div class="output stream stdout">
+<pre><code>A couple of people sitting on a bench next to a white horse.
+</code></pre>
+</div>
+</div>
+<div class="cell code" data-execution_count="21"
+data-colab="{&quot;base_uri&quot;:&quot;https://localhost:8080/&quot;}"
+id="c48AmWx5KnEL" data-outputId="3470748d-8edf-4233-bb72-79242d64ab1c">
+<div class="sourceCode" id="cb41"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a>use_beam_search <span class="op">=</span> <span class="va">False</span></span>
+<span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&#39;</span><span class="ch">\n</span><span class="st">&#39;</span>, generate_cap(pil_image))</span>
+<span id="cb41-3"><a href="#cb41-3" aria-hidden="true" tabindex="-1"></a>use_beam_search <span class="op">=</span> <span class="va">True</span></span></code></pre></div>
+<div class="output stream stderr">
+<pre><code>100%|██████████| 1/1 [00:03&lt;00:00,  3.23s/it]</code></pre>
+</div>
+<div class="output stream stdout">
+<pre><code>
+ A white dog and a couple of people sitting on a bench.
+</code></pre>
+</div>
+<div class="output stream stderr">
+<pre><code>
+</code></pre>
+</div>
+</div>
+<section id="clipcap--seamless" class="cell markdown" id="eMeaynBQbHKc">
+<h1>ClipCap + Seamless</h1>
+</section>
+<div class="cell markdown" id="UK6ChUvAsjSG">
+<p>Finally, your task is to employ the Seamless model to translate the
+generated captions into Farsi.</p>
+</div>
+<div class="cell code" data-execution_count="42"
+data-colab="{&quot;base_uri&quot;:&quot;https://localhost:8080/&quot;,&quot;height&quot;:1000}"
+id="undX9zoccBke" data-outputId="fab01e4a-ac4d-4cf0-9c90-eec04f638c3c">
+<div class="sourceCode" id="cb45"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> generate_and_translate_caption(pil_image):</span>
+<span id="cb45-2"><a href="#cb45-2" aria-hidden="true" tabindex="-1"></a>    caption <span class="op">=</span> generate_cap(pil_image)</span>
+<span id="cb45-3"><a href="#cb45-3" aria-hidden="true" tabindex="-1"></a>    translated_caption <span class="op">=</span> translate_english_to_persian(caption)</span>
+<span id="cb45-4"><a href="#cb45-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> translated_caption</span>
+<span id="cb45-5"><a href="#cb45-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-6"><a href="#cb45-6" aria-hidden="true" tabindex="-1"></a>IMAGE_NAMES <span class="op">=</span> [<span class="st">&#39;562207&#39;</span>, <span class="st">&#39;579664&#39;</span>, <span class="st">&#39;060623&#39;</span>, <span class="st">&#39;165547&#39;</span>, <span class="st">&#39;334321&#39;</span>, <span class="st">&#39;483108&#39;</span>, <span class="st">&#39;386164&#39;</span>, <span class="st">&#39;354533&#39;</span>]</span>
+<span id="cb45-7"><a href="#cb45-7" aria-hidden="true" tabindex="-1"></a>images_path <span class="op">=</span> os.path.join(os.path.dirname(current_directory), <span class="st">&quot;images&quot;</span>)</span>
+<span id="cb45-8"><a href="#cb45-8" aria-hidden="true" tabindex="-1"></a>os.makedirs(images_path, exist_ok<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb45-9"><a href="#cb45-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-10"><a href="#cb45-10" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> IMAGE_NAME <span class="kw">in</span> IMAGE_NAMES:</span>
+<span id="cb45-11"><a href="#cb45-11" aria-hidden="true" tabindex="-1"></a>    name_ <span class="op">=</span> <span class="st">&quot;COCO_val2014_000000&quot;</span> <span class="op">+</span> IMAGE_NAME <span class="op">+</span> <span class="st">&quot;.jpg&quot;</span></span>
+<span id="cb45-12"><a href="#cb45-12" aria-hidden="true" tabindex="-1"></a>    uploaded_file <span class="op">=</span> os.path.join(images_path, name_)</span>
+<span id="cb45-13"><a href="#cb45-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-14"><a href="#cb45-14" aria-hidden="true" tabindex="-1"></a>    image <span class="op">=</span> io.imread(uploaded_file)</span>
+<span id="cb45-15"><a href="#cb45-15" aria-hidden="true" tabindex="-1"></a>    pil_image <span class="op">=</span> PIL.Image.fromarray(image)</span>
+<span id="cb45-16"><a href="#cb45-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-17"><a href="#cb45-17" aria-hidden="true" tabindex="-1"></a>    display(pil_image)</span>
+<span id="cb45-18"><a href="#cb45-18" aria-hidden="true" tabindex="-1"></a>    translated_caption <span class="op">=</span> generate_and_translate_caption(pil_image)</span>
+<span id="cb45-19"><a href="#cb45-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-20"><a href="#cb45-20" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>()</span>
+<span id="cb45-21"><a href="#cb45-21" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(translated_caption)</span>
+<span id="cb45-22"><a href="#cb45-22" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>()</span>
+<span id="cb45-23"><a href="#cb45-23" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">&quot;====================================&quot;</span>)</span>
+<span id="cb45-24"><a href="#cb45-24" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>()</span>
+<span id="cb45-25"><a href="#cb45-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-26"><a href="#cb45-26" aria-hidden="true" tabindex="-1"></a><span class="co"># ==================================== Code (End) ====================================</span></span></code></pre></div>
+<div class="output display_data">
+<p><img src="fd9e36db824c5c67597c12d9b99afd3ceb856d42.png" /></p>
+</div>
+<div class="output stream stdout">
+<pre><code>
+چند نفر در کنار یک فیل ایستاده اند.
+
+====================================
+
+</code></pre>
+</div>
+<div class="output display_data">
+<p><img src="f2d13ca5ebd81662befdb7fa86989ce5eb82fb90.png" /></p>
+</div>
+<div class="output stream stdout">
+<pre><code>
+دسته هایی از موز روی یک میز جمع شده اند.
+
+====================================
+
+</code></pre>
+</div>
+<div class="output display_data">
+<p><img src="93c123e72b9027f38020d75424e3c113ec974b3f.png" /></p>
+</div>
+<div class="output stream stdout">
+<pre><code>
+دختری کوچک که با کیک در دهانش در میز نشسته است.
+
+====================================
+
+</code></pre>
+</div>
+<div class="output display_data">
+<p><img src="b8bb8921611bf6e04554ff7d3b3fb7de12617c35.png" /></p>
+</div>
+<div class="output stream stdout">
+<pre><code>
+یک میز با دو صندلی در مقابل یک پنجره.
+
+====================================
+
+</code></pre>
+</div>
+<div class="output display_data">
+<p><img src="8d8687ec3dae82c374dde48df7171d9d44e8dacb.png" /></p>
+</div>
+<div class="output stream stdout">
+<pre><code>
+چند نفر روی نیمکت کنار یک اسب سفید نشسته اند.
+
+====================================
+
+</code></pre>
+</div>
+<div class="output display_data">
+<p><img src="7685538589116d4f57f4f98e03d0ab2fca514b02.png" /></p>
+</div>
+<div class="output stream stdout">
+<pre><code>
+مردی که در کنار یک قطار در راه آهن ایستاده است.
+
+====================================
+
+</code></pre>
+</div>
+<div class="output display_data">
+<p><img src="ebeb9339cde0d2a92d95d69f9070dfe2a69bcf56.png" /></p>
+</div>
+<div class="output stream stdout">
+<pre><code>
+یک میز چوبی با دستگیره های چوبی.
+
+====================================
+
+</code></pre>
+</div>
+<div class="output display_data">
+<p><img src="3c77071e584ecc0eb7b1b8b36d0cc99c5f5600a8.png" /></p>
+</div>
+<div class="output stream stdout">
+<pre><code>
+یک موتورسیکلت در کنار جاده پارک شده است.
+
+====================================
+
+</code></pre>
+</div>
+</div>
+<section id="evaluation" class="cell markdown" id="lcr3QU3rshKx">
+<h1>Evaluation</h1>
+</section>
+<div class="cell markdown" id="Xt79gu8EslWQ">
+<p>In order to evaluate your model, first you need to prepare a dataset
+with 100 pairs of image and Farsi captions. For this you can use the
+images and captions available in the COCO dataset (you need to translate
+the captions to Farsi). Then use your model to predict captions for the
+images and finally use common metrics such as BLEU to evaluate your
+model.</p>
+</div>
+<div class="cell code" data-execution_count="69" id="RyHVpb9LIe9G">
+<div class="sourceCode" id="cb54"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb54-1"><a href="#cb54-1" aria-hidden="true" tabindex="-1"></a><span class="op">!</span>wget <span class="op">-</span>nc <span class="op">-</span>q <span class="op">--</span>show<span class="op">-</span>progress http:<span class="op">//</span>images.cocodataset.org<span class="op">/</span>annotations<span class="op">/</span>annotations_trainval2014.<span class="bu">zip</span></span>
+<span id="cb54-2"><a href="#cb54-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb54-3"><a href="#cb54-3" aria-hidden="true" tabindex="-1"></a><span class="op">!</span>unzip <span class="op">-</span>o <span class="op">-</span>q annotations_trainval2014.<span class="bu">zip</span> <span class="op">-</span>d .<span class="op">/</span></span></code></pre></div>
+</div>
+<div class="cell code" data-execution_count="70"
+data-colab="{&quot;base_uri&quot;:&quot;https://localhost:8080/&quot;}"
+id="o_m_VSRysiLk" data-outputId="ad333884-3a70-4911-8c78-5af21cfbdc8b">
+<div class="sourceCode" id="cb55"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb55-1"><a href="#cb55-1" aria-hidden="true" tabindex="-1"></a><span class="co"># ==================================== Code (Begin) ====================================</span></span>
+<span id="cb55-2"><a href="#cb55-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb55-3"><a href="#cb55-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Sorry for the stupid, inefficient loop here. Did not have much time. It was</span></span>
+<span id="cb55-4"><a href="#cb55-4" aria-hidden="true" tabindex="-1"></a><span class="co"># the final cell and I went with &#39;sunk cost fallacy&#39; as there were 20 predictions</span></span>
+<span id="cb55-5"><a href="#cb55-5" aria-hidden="true" tabindex="-1"></a><span class="co"># already made when I actually understood the code is an order of magnitude slower</span></span>
+<span id="cb55-6"><a href="#cb55-6" aria-hidden="true" tabindex="-1"></a><span class="co"># than what I thought it would be :/</span></span>
+<span id="cb55-7"><a href="#cb55-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb55-8"><a href="#cb55-8" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb55-9"><a href="#cb55-9" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> json</span>
+<span id="cb55-10"><a href="#cb55-10" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> tqdm <span class="im">import</span> tqdm</span>
+<span id="cb55-11"><a href="#cb55-11" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pycocotools.coco <span class="im">import</span> COCO</span>
+<span id="cb55-12"><a href="#cb55-12" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> nltk.translate.bleu_score <span class="im">import</span> corpus_bleu</span>
+<span id="cb55-13"><a href="#cb55-13" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> requests</span>
+<span id="cb55-14"><a href="#cb55-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb55-15"><a href="#cb55-15" aria-hidden="true" tabindex="-1"></a>annFile <span class="op">=</span> <span class="st">&quot;./annotations/captions_val2014.json&quot;</span></span>
+<span id="cb55-16"><a href="#cb55-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb55-17"><a href="#cb55-17" aria-hidden="true" tabindex="-1"></a>cocoGt <span class="op">=</span> COCO(annFile)</span>
+<span id="cb55-18"><a href="#cb55-18" aria-hidden="true" tabindex="-1"></a>ids <span class="op">=</span> <span class="bu">list</span>(cocoGt.anns.keys())</span>
+<span id="cb55-19"><a href="#cb55-19" aria-hidden="true" tabindex="-1"></a>ids <span class="op">=</span> ids[:<span class="dv">100</span>]</span>
+<span id="cb55-20"><a href="#cb55-20" aria-hidden="true" tabindex="-1"></a>img_ids <span class="op">=</span> [cocoGt.anns[<span class="bu">id</span>][<span class="st">&#39;image_id&#39;</span>] <span class="cf">for</span> <span class="bu">id</span> <span class="kw">in</span> ids]</span>
+<span id="cb55-21"><a href="#cb55-21" aria-hidden="true" tabindex="-1"></a>dataset <span class="op">=</span> [(data[<span class="st">&#39;id&#39;</span>], data[<span class="st">&#39;coco_url&#39;</span>], cocoGt.anns[ids[i]][<span class="st">&#39;caption&#39;</span>]) <span class="cf">for</span> i, data <span class="kw">in</span> <span class="bu">enumerate</span>(cocoGt.loadImgs(img_ids))]</span>
+<span id="cb55-22"><a href="#cb55-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb55-23"><a href="#cb55-23" aria-hidden="true" tabindex="-1"></a>os.makedirs(<span class="st">&#39;./images&#39;</span>, exist_ok<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb55-24"><a href="#cb55-24" aria-hidden="true" tabindex="-1"></a>predicted_captions <span class="op">=</span> []</span>
+<span id="cb55-25"><a href="#cb55-25" aria-hidden="true" tabindex="-1"></a>actual_captions <span class="op">=</span> []</span>
+<span id="cb55-26"><a href="#cb55-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb55-27"><a href="#cb55-27" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> <span class="bu">id</span>, img_url, actual_caption <span class="kw">in</span> tqdm(dataset):</span>
+<span id="cb55-28"><a href="#cb55-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb55-29"><a href="#cb55-29" aria-hidden="true" tabindex="-1"></a>  <span class="kw">def</span> download_image(url, save_path):</span>
+<span id="cb55-30"><a href="#cb55-30" aria-hidden="true" tabindex="-1"></a>      response <span class="op">=</span> requests.get(url, stream<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb55-31"><a href="#cb55-31" aria-hidden="true" tabindex="-1"></a>      <span class="cf">if</span> response.status_code <span class="op">==</span> <span class="dv">200</span>:</span>
+<span id="cb55-32"><a href="#cb55-32" aria-hidden="true" tabindex="-1"></a>          <span class="cf">with</span> <span class="bu">open</span>(save_path, <span class="st">&#39;wb&#39;</span>) <span class="im">as</span> <span class="bu">file</span>:</span>
+<span id="cb55-33"><a href="#cb55-33" aria-hidden="true" tabindex="-1"></a>              <span class="bu">file</span>.write(response.content)</span>
+<span id="cb55-34"><a href="#cb55-34" aria-hidden="true" tabindex="-1"></a>      <span class="cf">else</span>:</span>
+<span id="cb55-35"><a href="#cb55-35" aria-hidden="true" tabindex="-1"></a>          <span class="bu">print</span>(<span class="ss">f&quot;Unable to download image. HTTP response code: </span><span class="sc">{</span>response<span class="sc">.</span>status_code<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb55-36"><a href="#cb55-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb55-37"><a href="#cb55-37" aria-hidden="true" tabindex="-1"></a>  save_path <span class="op">=</span> <span class="st">&#39;images/&#39;</span><span class="op">+</span><span class="bu">str</span>(<span class="bu">id</span>)<span class="op">+</span><span class="st">&#39;.jpg&#39;</span></span>
+<span id="cb55-38"><a href="#cb55-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb55-39"><a href="#cb55-39" aria-hidden="true" tabindex="-1"></a>  download_image(img_url, save_path)</span>
+<span id="cb55-40"><a href="#cb55-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb55-41"><a href="#cb55-41" aria-hidden="true" tabindex="-1"></a>  image <span class="op">=</span> io.imread(save_path)</span>
+<span id="cb55-42"><a href="#cb55-42" aria-hidden="true" tabindex="-1"></a>  pil_image <span class="op">=</span> PIL.Image.fromarray(image)</span>
+<span id="cb55-43"><a href="#cb55-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb55-44"><a href="#cb55-44" aria-hidden="true" tabindex="-1"></a>  eng_generate_cap <span class="op">=</span> generate_cap(pil_image)</span>
+<span id="cb55-45"><a href="#cb55-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb55-46"><a href="#cb55-46" aria-hidden="true" tabindex="-1"></a>  predicted_captions.append(translate_english_to_persian(eng_generate_cap))</span>
+<span id="cb55-47"><a href="#cb55-47" aria-hidden="true" tabindex="-1"></a>  actual_captions.append([translate_english_to_persian(actual_caption)])</span>
+<span id="cb55-48"><a href="#cb55-48" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb55-49"><a href="#cb55-49" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb55-50"><a href="#cb55-50" aria-hidden="true" tabindex="-1"></a>bleu_score <span class="op">=</span> corpus_bleu(actual_captions, predicted_captions)</span>
+<span id="cb55-51"><a href="#cb55-51" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&quot;BLEU score: </span><span class="sc">{</span>bleu_score<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb55-52"><a href="#cb55-52" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb55-53"><a href="#cb55-53" aria-hidden="true" tabindex="-1"></a><span class="co"># ==================================== Code (End) ====================================</span></span></code></pre></div>
+<div class="output stream stdout">
+<pre><code>loading annotations into memory...
+Done (t=0.36s)
+creating index...
+index created!
+</code></pre>
+</div>
+<div class="output stream stderr">
+<pre><code>100%|██████████| 100/100 [49:52&lt;00:00, 29.92s/it]</code></pre>
+</div>
+<div class="output stream stdout">
+<pre><code>BLEU score: 0.4169310841451374
+</code></pre>
+</div>
+<div class="output stream stderr">
+<pre><code>
+</code></pre>
+</div>
+</div>
+<div class="cell code" data-execution_count="72"
+data-colab="{&quot;base_uri&quot;:&quot;https://localhost:8080/&quot;,&quot;height&quot;:419}"
+id="J-9v5wfTZTDC" data-outputId="b61f63b3-4ef2-4a46-aef1-d74178433e21">
+<div class="sourceCode" id="cb60"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb60-1"><a href="#cb60-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb60-2"><a href="#cb60-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-3"><a href="#cb60-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Bro it&#39;s not my fault the actual captions are written in unsimplified english</span></span>
+<span id="cb60-4"><a href="#cb60-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Which translates to weird</span></span>
+<span id="cb60-5"><a href="#cb60-5" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> pd.DataFrame({</span>
+<span id="cb60-6"><a href="#cb60-6" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;Actual Captions&#39;</span>: actual_captions,</span>
+<span id="cb60-7"><a href="#cb60-7" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;Predicted Captions&#39;</span>: predicted_captions</span>
+<span id="cb60-8"><a href="#cb60-8" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb60-9"><a href="#cb60-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-10"><a href="#cb60-10" aria-hidden="true" tabindex="-1"></a>df</span></code></pre></div>
+<div class="output execute_result" data-execution_count="72">
+
+  <div id="df-f26c2c27-89d3-42e0-899b-1fe0cdd948d5" class="colab-df-container">
+    <div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Actual Captions</th>
+      <th>Predicted Captions</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>[یک نسخه دوچرخه با یک ساعت به عنوان چرخ جلو.]</td>
+      <td>یک دوچرخه با یک ساعت در بالای آن.</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>[یک موتورسیکلت هوندا سیاه در مقابل یک گاراژ پا...</td>
+      <td>یک موتورسیکلت در کنار یک خیابان پارک شده است.</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>[یک اتاق با دیوارهای آبی و یک Lavabo سفید و درب.]</td>
+      <td>یک حمام با یک دیوار آبی و یک توالت آبی.</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>[يه ماشين که به نظر مي رسه که به طور غيرقانوني...</td>
+      <td>دو تا ماشين در کنار هم در خيابون شهر پارک شده ...</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>[یک هواپیمای بزرگ مسافرتی که در هوا پرواز می ک...</td>
+      <td>يه هواپيما از باند فرودگاه پرواز ميکنه</td>
+    </tr>
+    <tr>
+      <th>...</th>
+      <td>...</td>
+      <td>...</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>[مردی روی نیمکت کنار دوچرخه نشسته است.]</td>
+      <td>مردی که روی نیمکت کنار دوچرخه نشسته است.</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>[مردم در نزدیکی ایستگاه اتوبوس منتظر اتوبوس هس...</td>
+      <td>گروهی از مردم منتظر سوار شدن به اتوبوس هستند.</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>[آشپزخانه یک در سفید با یک پنجره دارد.]</td>
+      <td>یک آشپزخانه با کابین های سفید و دستگاه های سفید.</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>[مردی با گربه اش در کنارش می خوابد.]</td>
+      <td>مردی که روی یک تخت کنار یک گربه می خوابد.</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>[یک آشپزخانه و اتاق غذاخوری با یک پنجره بزرگ.]</td>
+      <td>یک آشپزخانه با یک میز و صندلی در وسط آن.</td>
+    </tr>
+  </tbody>
+</table>
+<p>100 rows × 2 columns</p>
+</div>
+    <div class="colab-df-buttons">
+
+  <div class="colab-df-container">
+    <button class="colab-df-convert" onclick="convertToInteractive('df-f26c2c27-89d3-42e0-899b-1fe0cdd948d5')"
+            title="Convert this dataframe to an interactive table."
+            style="display:none;">
+
+  <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960">
+    <path d="M120-120v-720h720v720H120Zm60-500h600v-160H180v160Zm220 220h160v-160H400v160Zm0 220h160v-160H400v160ZM180-400h160v-160H180v160Zm440 0h160v-160H620v160ZM180-180h160v-160H180v160Zm440 0h160v-160H620v160Z"/>
+  </svg>
+    </button>
+
+  <style>
+    .colab-df-container {
+      display:flex;
+      gap: 12px;
+    }
+
+    .colab-df-convert {
+      background-color: #E8F0FE;
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      display: none;
+      fill: #1967D2;
+      height: 32px;
+      padding: 0 0 0 0;
+      width: 32px;
+    }
+
+    .colab-df-convert:hover {
+      background-color: #E2EBFA;
+      box-shadow: 0px 1px 2px rgba(60, 64, 67, 0.3), 0px 1px 3px 1px rgba(60, 64, 67, 0.15);
+      fill: #174EA6;
+    }
+
+    .colab-df-buttons div {
+      margin-bottom: 4px;
+    }
+
+    [theme=dark] .colab-df-convert {
+      background-color: #3B4455;
+      fill: #D2E3FC;
+    }
+
+    [theme=dark] .colab-df-convert:hover {
+      background-color: #434B5C;
+      box-shadow: 0px 1px 3px 1px rgba(0, 0, 0, 0.15);
+      filter: drop-shadow(0px 1px 2px rgba(0, 0, 0, 0.3));
+      fill: #FFFFFF;
+    }
+  </style>
+
+    <script>
+      const buttonEl =
+        document.querySelector('#df-f26c2c27-89d3-42e0-899b-1fe0cdd948d5 button.colab-df-convert');
+      buttonEl.style.display =
+        google.colab.kernel.accessAllowed ? 'block' : 'none';
+
+      async function convertToInteractive(key) {
+        const element = document.querySelector('#df-f26c2c27-89d3-42e0-899b-1fe0cdd948d5');
+        const dataTable =
+          await google.colab.kernel.invokeFunction('convertToInteractive',
+                                                    [key], {});
+        if (!dataTable) return;
+
+        const docLinkHtml = 'Like what you see? Visit the ' +
+          '<a target="_blank" href=https://colab.research.google.com/notebooks/data_table.ipynb>data table notebook</a>'
+          + ' to learn more about interactive tables.';
+        element.innerHTML = '';
+        dataTable['output_type'] = 'display_data';
+        await google.colab.output.renderOutput(dataTable, element);
+        const docLink = document.createElement('div');
+        docLink.innerHTML = docLinkHtml;
+        element.appendChild(docLink);
+      }
+    </script>
+  </div>
+
+
+<div id="df-fb52df79-fd28-435c-95af-b1a982559581">
+  <button class="colab-df-quickchart" onclick="quickchart('df-fb52df79-fd28-435c-95af-b1a982559581')"
+            title="Suggest charts"
+            style="display:none;">
+
+<svg xmlns="http://www.w3.org/2000/svg" height="24px"viewBox="0 0 24 24"
+     width="24px">
+    <g>
+        <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
+    </g>
+</svg>
+  </button>
+
+<style>
+  .colab-df-quickchart {
+      --bg-color: #E8F0FE;
+      --fill-color: #1967D2;
+      --hover-bg-color: #E2EBFA;
+      --hover-fill-color: #174EA6;
+      --disabled-fill-color: #AAA;
+      --disabled-bg-color: #DDD;
+  }
+
+  [theme=dark] .colab-df-quickchart {
+      --bg-color: #3B4455;
+      --fill-color: #D2E3FC;
+      --hover-bg-color: #434B5C;
+      --hover-fill-color: #FFFFFF;
+      --disabled-bg-color: #3B4455;
+      --disabled-fill-color: #666;
+  }
+
+  .colab-df-quickchart {
+    background-color: var(--bg-color);
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    display: none;
+    fill: var(--fill-color);
+    height: 32px;
+    padding: 0;
+    width: 32px;
+  }
+
+  .colab-df-quickchart:hover {
+    background-color: var(--hover-bg-color);
+    box-shadow: 0 1px 2px rgba(60, 64, 67, 0.3), 0 1px 3px 1px rgba(60, 64, 67, 0.15);
+    fill: var(--button-hover-fill-color);
+  }
+
+  .colab-df-quickchart-complete:disabled,
+  .colab-df-quickchart-complete:disabled:hover {
+    background-color: var(--disabled-bg-color);
+    fill: var(--disabled-fill-color);
+    box-shadow: none;
+  }
+
+  .colab-df-spinner {
+    border: 2px solid var(--fill-color);
+    border-color: transparent;
+    border-bottom-color: var(--fill-color);
+    animation:
+      spin 1s steps(1) infinite;
+  }
+
+  @keyframes spin {
+    0% {
+      border-color: transparent;
+      border-bottom-color: var(--fill-color);
+      border-left-color: var(--fill-color);
+    }
+    20% {
+      border-color: transparent;
+      border-left-color: var(--fill-color);
+      border-top-color: var(--fill-color);
+    }
+    30% {
+      border-color: transparent;
+      border-left-color: var(--fill-color);
+      border-top-color: var(--fill-color);
+      border-right-color: var(--fill-color);
+    }
+    40% {
+      border-color: transparent;
+      border-right-color: var(--fill-color);
+      border-top-color: var(--fill-color);
+    }
+    60% {
+      border-color: transparent;
+      border-right-color: var(--fill-color);
+    }
+    80% {
+      border-color: transparent;
+      border-right-color: var(--fill-color);
+      border-bottom-color: var(--fill-color);
+    }
+    90% {
+      border-color: transparent;
+      border-bottom-color: var(--fill-color);
+    }
+  }
+</style>
+
+  <script>
+    async function quickchart(key) {
+      const quickchartButtonEl =
+        document.querySelector('#' + key + ' button');
+      quickchartButtonEl.disabled = true;  // To prevent multiple clicks.
+      quickchartButtonEl.classList.add('colab-df-spinner');
+      try {
+        const charts = await google.colab.kernel.invokeFunction(
+            'suggestCharts', [key], {});
+      } catch (error) {
+        console.error('Error during call to suggestCharts:', error);
+      }
+      quickchartButtonEl.classList.remove('colab-df-spinner');
+      quickchartButtonEl.classList.add('colab-df-quickchart-complete');
+    }
+    (() => {
+      let quickchartButtonEl =
+        document.querySelector('#df-fb52df79-fd28-435c-95af-b1a982559581 button');
+      quickchartButtonEl.style.display =
+        google.colab.kernel.accessAllowed ? 'block' : 'none';
+    })();
+  </script>
+</div>
+    </div>
+  </div>
+
+</div>
+</div>
